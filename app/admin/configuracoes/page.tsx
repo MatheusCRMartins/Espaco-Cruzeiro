@@ -1,8 +1,13 @@
-import { BUSINESS } from "@/lib/constants";
+import { getBusinessSettings } from "@/lib/business-settings";
+
+import { BusinessSettingsForm } from "./business-settings-form";
 
 export const metadata = { title: "Configurações" };
+export const dynamic = "force-dynamic";
 
-export default function AdminSettingsPage() {
+export default async function AdminSettingsPage() {
+  const settings = await getBusinessSettings();
+
   const envChecks = [
     { key: "NEXT_PUBLIC_SUPABASE_URL", value: process.env.NEXT_PUBLIC_SUPABASE_URL },
     { key: "SUPABASE_SERVICE_ROLE_KEY", value: process.env.SUPABASE_SERVICE_ROLE_KEY },
@@ -12,36 +17,26 @@ export default function AdminSettingsPage() {
     { key: "RESEND_API_KEY", value: process.env.RESEND_API_KEY },
     { key: "RESEND_FROM_EMAIL", value: process.env.RESEND_FROM_EMAIL },
     { key: "NEXT_PUBLIC_SITE_URL", value: process.env.NEXT_PUBLIC_SITE_URL },
-    { key: "NEXT_PUBLIC_WHATSAPP_NUMBER", value: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER },
     { key: "CRON_SECRET", value: process.env.CRON_SECRET },
   ];
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Configurações</h1>
-
-      <section className="rounded-lg border border-border bg-card p-5">
-        <h2 className="font-semibold">Dados do negócio</h2>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Estes valores vivem em <code className="rounded bg-muted px-1 py-0.5">lib/constants.ts</code>.
-          Para editar, atualize o arquivo e faça commit — evita inconsistência entre
-          site e contratos.
+      <div>
+        <h1 className="text-2xl font-semibold">Configurações</h1>
+        <p className="text-sm text-muted-foreground">
+          Tudo que aparece no site público vem daqui — header, footer, página de contato,
+          schema.org de SEO local e templates de e-mail. Mudanças refletem em até 30 segundos.
         </p>
-        <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
-          <Detail label="Nome" value={BUSINESS.name} />
-          <Detail label="Razão social" value={BUSINESS.legalName} />
-          <Detail label="Endereço" value={`${BUSINESS.address.street} — ${BUSINESS.address.neighborhood}, ${BUSINESS.address.city}/${BUSINESS.address.state}`} />
-          <Detail label="E-mail" value={BUSINESS.contact.email} />
-          <Detail label="WhatsApp" value={BUSINESS.contact.whatsappNumber} />
-          <Detail label="Telefone" value={BUSINESS.contact.phone} />
-        </dl>
-      </section>
+      </div>
+
+      <BusinessSettingsForm initial={settings} />
 
       <section className="rounded-lg border border-border bg-card p-5">
-        <h2 className="font-semibold">Checagem de variáveis de ambiente</h2>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Variáveis marcadas como <strong>faltando</strong> impedem certas
-          funcionalidades (pagamento, e-mails, cron). Configure no painel da Vercel.
+        <h2 className="font-semibold">Variáveis de ambiente</h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Variáveis marcadas como <strong>faltando</strong> impedem certas funcionalidades
+          (pagamento, e-mails, cron). Configure no painel da Vercel — não pelo painel admin.
         </p>
         <ul className="mt-4 divide-y divide-border text-sm">
           {envChecks.map((e) => (
@@ -60,15 +55,6 @@ export default function AdminSettingsPage() {
           ))}
         </ul>
       </section>
-    </div>
-  );
-}
-
-function Detail({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border border-border/60 bg-background p-3">
-      <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
-      <dd className="mt-1 text-sm">{value}</dd>
     </div>
   );
 }
