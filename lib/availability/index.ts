@@ -174,3 +174,80 @@ export async function assertDateAvailable(
 
   return { ok: true, startTime: rule.startTime.slice(0, 5), endTime: rule.endTime.slice(0, 5) };
 }
+
+// ---------------------------------------------------------------------------
+// Proof-of-life: conta sábados (e datas-chave) livres pros próximos N meses.
+// Usado pelo hero da home pra criar urgência genuína (não FOMO falso).
+// ---------------------------------------------------------------------------
+const PROOF_TTL_MS = 60 * 1000; // 1 min — o agregado muda devagar
+const proofCache = globalThis as unknown as {
+  _ecProofOfLife?: { value: ProofOfLife; expiresAt: number };
+};
+
+export type ProofOfLife = {
+  // Sábados livres no mês corrente (até o último dia do mês).
+  saturdaysCurrentMonth: number;
+  // Sábados livres no próximo mês.
+  saturdaysNextMonth: number;
+  // Mês atual (number 1..12) — útil pra montar a frase.
+  currentMonth: number;
+  nextMonth: number;
+  // Datas livres totais nos próximos 60 dias.
+  totalAvailableNext60Days: number;
+};
+
+export async function getProofOfLife(): Promise<ProofOfLife> {
+  const now = Date.now();
+  const cached = proofCache._ecProofOfLife;
+  if (cached && cached.expiresAt > now) return cached.value;
+
+  const today = new Date();
+  const cy = today.getFullYear();
+  const cm = today.getMonth(); // 0-indexed
+  const next = new Date(cy, cm + 1, 1);
+  const ny = next.getFullYear();
+  const nm = next.getMonth();
+
+  const monthA = `${cy}-${String(cm + 1).padStart(2, "0")}`;
+  const monthB = `${ny}-${String(nm + 1).padStart(2, "0")}`;
+
+  let saturdaysA = 0;
+  let saturdaysB = 0;
+  let total60 = 0;
+
+  try {
+    const [a, b] = await Promise.all([
+      getMonthAvailability(monthA),
+      getMonthAvailability(monthB),
+    ]);
+
+    const todayIso = today.toISOString().slice(0, 10);
+    const sixtyDaysFromNow = new Date(today.getTime() + 60 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+
+    for (const d of a.days) {
+      if (d.status !== "available") continue;
+      if (d.date < todayIso) continue;
+      if (d.weekday === 6) saturdaysA++;
+      if (d.date <= sixtyDaysFromNow) total60++;
+    }
+    for (const d of b.days) {
+      if (d.status !== "available") continue;
+      if (d.weekday === 6) saturdaysB++;
+      if (d.date <= sixtyDaysFromNow) total60++;
+    }
+  } catch (err) {
+    console.error("[availability] proof-of-life failed:", err);
+  }
+
+  const value: ProofOfLife = {
+    saturdaysCurrentMonth: saturdaysA,
+    saturdaysNextMonth: saturdaysB,
+    currentMonth: cm + 1,
+    nextMonth: nm + 1,
+    totalAvailableNext60Days: total60,
+  };
+  proofCache._ecProofOfLife = { value, expiresAt: now + PROOF_TTL_MS };
+  return value;
+}

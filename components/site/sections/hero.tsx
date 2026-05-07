@@ -1,21 +1,61 @@
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import { Calendar, Sparkles } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { Container, Eyebrow } from "@/components/ui/container";
+import { getProofOfLife } from "@/lib/availability";
 import { getBusinessSettings } from "@/lib/business-settings";
 import { getContentBlock } from "@/lib/content";
 import { cn, waLink } from "@/lib/utils";
 
+const MONTHS_PT = [
+  "janeiro",
+  "fevereiro",
+  "março",
+  "abril",
+  "maio",
+  "junho",
+  "julho",
+  "agosto",
+  "setembro",
+  "outubro",
+  "novembro",
+  "dezembro",
+];
+
+function buildScarcityMessage(p: Awaited<ReturnType<typeof getProofOfLife>>) {
+  // Prioridade: mostrar urgência genuína sem ser FOMO falso.
+  if (p.saturdaysCurrentMonth > 0 && p.saturdaysCurrentMonth <= 4) {
+    const m = MONTHS_PT[p.currentMonth - 1];
+    return `Apenas ${p.saturdaysCurrentMonth} ${
+      p.saturdaysCurrentMonth === 1 ? "sábado livre" : "sábados livres"
+    } em ${m}`;
+  }
+  if (
+    p.saturdaysCurrentMonth === 0 &&
+    p.saturdaysNextMonth > 0 &&
+    p.saturdaysNextMonth <= 4
+  ) {
+    const m = MONTHS_PT[p.nextMonth - 1];
+    return `Sábados de ${m} já estão se preenchendo — restam ${p.saturdaysNextMonth}`;
+  }
+  if (p.totalAvailableNext60Days > 0 && p.totalAvailableNext60Days <= 8) {
+    return `${p.totalAvailableNext60Days} datas livres nos próximos 2 meses`;
+  }
+  return null;
+}
+
 export async function Hero() {
-  const [settings, content] = await Promise.all([
+  const [settings, content, proof] = await Promise.all([
     getBusinessSettings(),
     getContentBlock("home.hero"),
+    getProofOfLife(),
   ]);
   const waNumber = settings.contact.whatsappNumber;
   const eyebrow =
     content.eyebrow ||
     `Buffet em ${settings.address.city} · ${settings.address.street.split(",")[0]}`;
+  const scarcity = buildScarcityMessage(proof);
 
   return (
     <section className="relative isolate overflow-hidden border-b border-border">
@@ -36,6 +76,14 @@ export async function Hero() {
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
             {content.subtitle}
           </p>
+
+          {scarcity && (
+            <p className="mx-auto mt-6 inline-flex items-center gap-2 rounded-full border border-accent/40 bg-accent/10 px-4 py-1.5 text-xs font-medium text-foreground">
+              <Calendar className="size-3.5 text-accent" aria-hidden />
+              {scarcity}
+            </p>
+          )}
+
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/reservar"
