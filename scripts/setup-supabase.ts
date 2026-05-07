@@ -35,6 +35,8 @@ const RLS_SQL = /* sql */ `
   ALTER TABLE content_blocks       ENABLE ROW LEVEL SECURITY;
   ALTER TABLE notifications_log    ENABLE ROW LEVEL SECURITY;
   ALTER TABLE admin_audit_log      ENABLE ROW LEVEL SECURITY;
+  -- business_settings adicionado depois — protege também
+  ALTER TABLE IF EXISTS business_settings ENABLE ROW LEVEL SECURITY;
 
   -- 2) Policies de leitura pública — só o que aparece no site
   DROP POLICY IF EXISTS "public_read_active_event_types" ON event_types;
@@ -66,6 +68,17 @@ const RLS_SQL = /* sql */ `
   CREATE POLICY "public_read_content_blocks"
     ON content_blocks FOR SELECT TO anon, authenticated
     USING (true);
+
+  -- business_settings: NAP e horários são públicos (já aparecem no site).
+  DO $$
+  BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'business_settings') THEN
+      DROP POLICY IF EXISTS "public_read_business_settings" ON business_settings;
+      CREATE POLICY "public_read_business_settings"
+        ON business_settings FOR SELECT TO anon, authenticated
+        USING (true);
+    END IF;
+  END $$;
 
   -- bookings, leads, notifications_log, admin_audit_log:
   -- nenhuma policy = ninguém via PostgREST acessa.

@@ -16,6 +16,7 @@
     "db:setup-storage": "tsx scripts/setup-storage.ts",
     "db:create-admin": "tsx scripts/create-admin.ts",
     "db:verify": "tsx scripts/verify-setup.ts",
+    "db:test-rls": "tsx scripts/test-rls.ts",
     "email:preview": "email dev -p 3001 -d ./emails"
   },
   "dependencies": {
