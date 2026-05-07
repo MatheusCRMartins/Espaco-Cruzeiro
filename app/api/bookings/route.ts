@@ -7,6 +7,11 @@ import {
   generateBookingCode,
   softLockExpiresAtIso,
 } from "@/lib/bookings/service";
+import {
+  applyPercentOff,
+  checkCoupon,
+  incrementCouponUse,
+} from "@/lib/coupons";
 import { getDb, schema } from "@/lib/db";
 import { createBookingPreference } from "@/lib/mercadopago/preference";
 import { bookingInputSchema } from "@/lib/validations/booking";
@@ -89,11 +94,31 @@ export async function POST(request: Request) {
   }
 
   // 4. amount
-  const { totalAmount, depositAmount, payableNow } = computeAmount({
+  let { totalAmount, depositAmount, payableNow } = computeAmount({
     guestsCount: input.guestsCount,
     basePricePerPerson: eventType.basePricePerPerson,
     paymentType: input.paymentType,
   });
+
+  // 4b. coupon (opcional)
+  let appliedCoupon: { code: string; discount: number } | null = null;
+  if (input.couponCode) {
+    const couponResult = await checkCoupon(input.couponCode);
+    if (!couponResult.ok) {
+      return NextResponse.json(
+        { error: "coupon_invalid", reason: couponResult.reason, message: couponResult.message },
+        { status: 400 },
+      );
+    }
+    const { discount, totalAfter } = applyPercentOff(totalAmount, couponResult.percentOff);
+    appliedCoupon = { code: couponResult.code, discount };
+    totalAmount = totalAfter;
+    // Recalcula deposit/payableNow proporcionalmente
+    const ratio = totalAfter > 0 ? totalAfter / (totalAfter + discount) : 1;
+    depositAmount = Math.round(depositAmount * ratio * 100) / 100;
+    payableNow =
+      input.paymentType === "full" ? totalAfter : depositAmount;
+  }
 
   // 5. insert booking
   const bookingCode = await generateBookingCode();
@@ -126,6 +151,8 @@ export async function POST(request: Request) {
         paymentType: input.paymentType,
         status: "pending_payment",
         notes: input.notes ?? null,
+        couponCode: appliedCoupon?.code ?? null,
+        discountAmount: (appliedCoupon?.discount ?? 0).toFixed(2),
         softLockExpiresAt: softLockExpiresAtIso(),
       })
       .returning({ id: schema.bookings.id });
@@ -133,6 +160,11 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("[bookings] insert failed:", err);
     return NextResponse.json({ error: "internal_error" }, { status: 500 });
+  }
+
+  // Incrementa uso do cupom (best-effort, não bloqueia o fluxo)
+  if (appliedCoupon) {
+    void incrementCouponUse(appliedCoupon.code);
   }
 
   // 6. Mercado Pago preference (se configurado)

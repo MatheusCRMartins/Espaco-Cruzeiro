@@ -47,6 +47,7 @@ type FormState = {
   paymentType: "deposit" | "full";
   consent: boolean;
   website: string; // honeypot
+  couponCode: string;
 };
 
 const INITIAL: FormState = {
@@ -62,13 +63,21 @@ const INITIAL: FormState = {
   paymentType: "deposit",
   consent: false,
   website: "",
+  couponCode: "",
 };
+
+type CouponState =
+  | { phase: "idle" }
+  | { phase: "checking" }
+  | { phase: "ok"; code: string; percentOff: number; description: string | null }
+  | { phase: "error"; message: string };
 
 export function ReservarFlow({ eventTypes }: Props) {
   const [step, setStep] = useState<StepKey>("tipo");
   const [form, setForm] = useState<FormState>(INITIAL);
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [coupon, setCoupon] = useState<CouponState>({ phase: "idle" });
 
   const selectedType = useMemo(
     () => eventTypes.find((e) => e.id === form.eventTypeId) ?? null,
@@ -77,14 +86,51 @@ export function ReservarFlow({ eventTypes }: Props) {
 
   const amounts = useMemo(() => {
     if (!selectedType) return null;
-    const total = selectedType.basePricePerPerson * form.guestsCount;
+    const baseTotal = selectedType.basePricePerPerson * form.guestsCount;
+    const percentOff = coupon.phase === "ok" ? coupon.percentOff : 0;
+    const discount = Math.round(baseTotal * percentOff) / 100;
+    const total = Math.round((baseTotal - discount) * 100) / 100;
     const deposit = Math.round(total * 0.3 * 100) / 100;
     return {
-      total: Math.round(total * 100) / 100,
+      baseTotal: Math.round(baseTotal * 100) / 100,
+      discount: Math.round(discount * 100) / 100,
+      total,
       deposit,
       payableNow: form.paymentType === "full" ? total : deposit,
     };
-  }, [selectedType, form.guestsCount, form.paymentType]);
+  }, [selectedType, form.guestsCount, form.paymentType, coupon]);
+
+  async function applyCoupon() {
+    const code = form.couponCode.trim().toUpperCase();
+    if (!code) {
+      setCoupon({ phase: "idle" });
+      return;
+    }
+    setCoupon({ phase: "checking" });
+    try {
+      const r = await fetch(
+        `/api/coupons/validate?code=${encodeURIComponent(code)}`,
+      );
+      const json = (await r.json()) as
+        | { ok: true; code: string; percentOff: number; description: string | null }
+        | { ok: false; message: string };
+      if (!("ok" in json) || !json.ok) {
+        setCoupon({
+          phase: "error",
+          message: ("message" in json && json.message) || "Cupom inválido.",
+        });
+      } else {
+        setCoupon({
+          phase: "ok",
+          code: json.code,
+          percentOff: json.percentOff,
+          description: json.description,
+        });
+      }
+    } catch {
+      setCoupon({ phase: "error", message: "Erro ao validar. Tente de novo." });
+    }
+  }
 
   const stepIndex = STEPS.findIndex((s) => s.key === step);
   const canNext = (): boolean => {
@@ -138,6 +184,7 @@ export function ReservarFlow({ eventTypes }: Props) {
           customerPhone: form.phone,
           customerCpf: form.cpf,
           notes: form.notes || null,
+          couponCode: coupon.phase === "ok" ? coupon.code : undefined,
           consent: form.consent,
           website: form.website,
         }),
@@ -428,6 +475,59 @@ export function ReservarFlow({ eventTypes }: Props) {
                 ))}
               </div>
 
+              <div className="mt-5 rounded-xl border border-border bg-background p-4">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Cupom de desconto
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    type="text"
+                    value={form.couponCode}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        couponCode: e.target.value.toUpperCase(),
+                      }))
+                    }
+                    placeholder="EX: BLACK20"
+                    className="flex-1 rounded-md border border-input bg-background px-3 py-2 font-mono text-sm uppercase outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    disabled={coupon.phase === "ok"}
+                  />
+                  {coupon.phase === "ok" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCoupon({ phase: "idle" });
+                        setForm((f) => ({ ...f, couponCode: "" }));
+                      }}
+                      className="rounded-md border border-border bg-background px-3 text-xs hover:bg-muted"
+                    >
+                      Remover
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={applyCoupon}
+                      disabled={
+                        coupon.phase === "checking" || !form.couponCode.trim()
+                      }
+                      className="rounded-md bg-primary px-4 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+                    >
+                      {coupon.phase === "checking" ? "Validando…" : "Aplicar"}
+                    </button>
+                  )}
+                </div>
+                {coupon.phase === "ok" && (
+                  <p className="mt-2 text-xs text-emerald-700">
+                    ✓ Cupom <strong>{coupon.code}</strong> aplicado —{" "}
+                    {coupon.percentOff}% de desconto.
+                  </p>
+                )}
+                {coupon.phase === "error" && (
+                  <p className="mt-2 text-xs text-destructive">{coupon.message}</p>
+                )}
+              </div>
+
               <label className="mt-5 flex cursor-pointer items-start gap-3 text-sm text-muted-foreground">
                 <input
                   type="checkbox"
@@ -532,6 +632,18 @@ export function ReservarFlow({ eventTypes }: Props) {
 
         {amounts && (
           <div className="mt-5 space-y-2 border-t border-border pt-5 text-sm">
+            {coupon.phase === "ok" && amounts.discount > 0 ? (
+              <>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Subtotal</span>
+                  <span>{formatBRL(amounts.baseTotal)}</span>
+                </div>
+                <div className="flex justify-between text-emerald-700">
+                  <span>Cupom {coupon.code} ({coupon.percentOff}%)</span>
+                  <span>− {formatBRL(amounts.discount)}</span>
+                </div>
+              </>
+            ) : null}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total estimado</span>
               <span>{formatBRL(amounts.total)}</span>

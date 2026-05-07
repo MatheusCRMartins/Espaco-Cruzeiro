@@ -19,6 +19,7 @@ const NAV = [
   { href: "/admin/tipos-evento", label: "Tipos de evento" },
   { href: "/admin/galeria", label: "Galeria" },
   { href: "/admin/depoimentos", label: "Depoimentos" },
+  { href: "/admin/cupons", label: "Cupons" },
   { href: "/admin/conteudo", label: "Conteúdo" },
   { href: "/admin/comunicacoes", label: "Comunicações" },
   { href: "/admin/auditoria", label: "Auditoria" },

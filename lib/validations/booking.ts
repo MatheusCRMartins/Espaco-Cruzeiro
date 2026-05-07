@@ -15,6 +15,15 @@ export const bookingInputSchema = z.object({
   customerPhone: phoneBR,
   customerCpf: cpf,
   notes: z.string().trim().max(2000).optional().nullable(),
+  // Cupom opcional — re-validado server-side
+  couponCode: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .max(40)
+    .regex(/^[A-Z0-9_-]+$/, "Código inválido")
+    .optional()
+    .or(z.literal("")),
   consent: z.literal(true, { message: "É necessário aceitar os termos" }),
   website: honeypot, // honeypot
 });

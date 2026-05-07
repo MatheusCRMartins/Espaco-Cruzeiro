@@ -115,6 +115,10 @@ export const bookings = pgTable(
     paymentStatus: text("payment_status"),
     notes: text("notes"),
     adminNotes: text("admin_notes"),
+    // Cupom aplicado (nullable). Guardamos o código pra histórico mesmo se
+    // o cupom for deletado depois.
+    couponCode: text("coupon_code"),
+    discountAmount: numeric("discount_amount", { precision: 10, scale: 2 }).default("0").notNull(),
     softLockExpiresAt: timestamp("soft_lock_expires_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -212,6 +216,34 @@ export const testimonials = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Coupons — códigos de desconto promocionais
+// ---------------------------------------------------------------------------
+export const coupons = pgTable(
+  "coupons",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Sempre uppercase, regex [A-Z0-9_-]+
+    code: text("code").notNull(),
+    description: text("description"),
+    // Desconto em percent (1..100). Tipo "fixed" pode entrar no futuro.
+    percentOff: smallint("percent_off").notNull(),
+    // null = ilimitado
+    maxUses: integer("max_uses"),
+    usedCount: integer("used_count").default(0).notNull(),
+    // janela de validade (null = sem limite)
+    validFrom: timestamp("valid_from", { withTimezone: true }),
+    validUntil: timestamp("valid_until", { withTimezone: true }),
+    active: boolean("active").default(true).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("coupons_code_uq").on(t.code),
+    check("coupons_percent_check", sql`percent_off > 0 AND percent_off <= 100`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Business settings — singleton (1 linha) com NAP, horários, redes, política.
 // Substitui lib/constants.ts hardcoded. Admin edita pelo painel.
 // ---------------------------------------------------------------------------
@@ -286,3 +318,5 @@ export type BookingStatus = (typeof bookingStatusValues)[number];
 export type PaymentType = (typeof paymentTypeValues)[number];
 export type LeadStatus = (typeof leadStatusValues)[number];
 export type BusinessSettings = typeof businessSettings.$inferSelect;
+export type Coupon = typeof coupons.$inferSelect;
+export type NewCoupon = typeof coupons.$inferInsert;
