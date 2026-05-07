@@ -1,9 +1,9 @@
 "use client";
 
+import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { LOGIN_INITIAL, signInAction, type LoginState } from "./actions";
 
 export function LoginForm({
   next,
@@ -13,73 +13,59 @@ export function LoginForm({
   initialError?: string;
 }) {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(
-    initialError === "forbidden"
-      ? "Você não tem permissão para acessar o painel."
-      : null,
+  const [state, formAction, pending] = useActionState<LoginState, FormData>(
+    signInAction,
+    LOGIN_INITIAL,
   );
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const supabase = createSupabaseBrowserClient();
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) {
-        setError("E-mail ou senha inválidos.");
-        return;
-      }
-      router.replace(next && next.startsWith("/") ? next : "/admin");
+  // Em sucesso, redireciona pro destino (cookies já estão setados no servidor)
+  useEffect(() => {
+    if (state.status === "ok") {
+      const target = next && next.startsWith("/") ? next : "/admin";
+      router.replace(target);
       router.refresh();
-    } catch {
-      setError("Não foi possível entrar agora. Tente novamente.");
-    } finally {
-      setLoading(false);
     }
-  }
+  }, [state.status, next, router]);
+
+  const initialMessage =
+    initialError === "forbidden"
+      ? "Você não tem permissão para acessar o painel."
+      : null;
+  const message = state.message ?? initialMessage;
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form action={formAction} className="space-y-4">
       <label className="block text-sm">
         <span className="text-foreground">E-mail</span>
         <input
+          name="email"
           type="email"
           autoComplete="email"
           required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
           className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
         />
       </label>
       <label className="block text-sm">
         <span className="text-foreground">Senha</span>
         <input
+          name="password"
           type="password"
           autoComplete="current-password"
           required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
           className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
         />
       </label>
-      {error && (
+      {message && state.status !== "ok" && (
         <p role="alert" className="text-sm text-destructive">
-          {error}
+          {message}
         </p>
       )}
       <button
         type="submit"
-        disabled={loading}
+        disabled={pending}
         className="inline-flex h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-60"
       >
-        {loading ? "Entrando…" : "Entrar"}
+        {pending ? "Entrando…" : "Entrar"}
       </button>
     </form>
   );

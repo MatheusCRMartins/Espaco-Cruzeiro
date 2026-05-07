@@ -3,11 +3,32 @@ import { NextResponse } from "next/server";
 import { getDb, schema } from "@/lib/db";
 import { notify } from "@/lib/notifications";
 import { serverEnv } from "@/lib/env";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { leadInputSchema } from "@/lib/validations/lead";
 
 export const runtime = "nodejs";
 
+const LEADS_LIMIT_PER_IP = 5; // 5 envios
+const LEADS_WINDOW_SECONDS = 60 * 10; // 10 minutos
+
 export async function POST(request: Request) {
+  // 1) Rate limit por IP (defesa contra spam/scraper)
+  const ip = getClientIp(request.headers);
+  const ipResult = await rateLimit({
+    key: `leads:ip:${ip}`,
+    limit: LEADS_LIMIT_PER_IP,
+    windowSeconds: LEADS_WINDOW_SECONDS,
+  });
+  if (!ipResult.ok) {
+    return NextResponse.json(
+      { error: "rate_limited", retryAfterSeconds: ipResult.retryAfterSeconds },
+      {
+        status: 429,
+        headers: { "Retry-After": String(ipResult.retryAfterSeconds) },
+      },
+    );
+  }
+
   let json: unknown;
   try {
     json = await request.json();
@@ -23,11 +44,28 @@ export async function POST(request: Request) {
     );
   }
 
-  // TODO(phase-3): rate limiting (Upstash Redis) on IP + email.
-
   const input = parsed.data;
-  const db = getDb();
 
+  // 2) Rate limit por email (mesmo email não pode mandar 100 leads em série)
+  const emailResult = await rateLimit({
+    key: `leads:email:${input.email}`,
+    limit: 3,
+    windowSeconds: LEADS_WINDOW_SECONDS,
+  });
+  if (!emailResult.ok) {
+    return NextResponse.json(
+      {
+        error: "rate_limited",
+        retryAfterSeconds: emailResult.retryAfterSeconds,
+      },
+      {
+        status: 429,
+        headers: { "Retry-After": String(emailResult.retryAfterSeconds) },
+      },
+    );
+  }
+
+  const db = getDb();
   const [lead] = await db
     .insert(schema.leads)
     .values({
