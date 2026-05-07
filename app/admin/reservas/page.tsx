@@ -88,6 +88,12 @@ export default async function BookingsListPage({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/admin/reservas/manual"
+            className="h-9 inline-flex items-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            + Nova reserva manual
+          </Link>
           <a
             href="/api/admin/export?type=bookings"
             className="h-9 inline-flex items-center rounded-md border border-border bg-background px-3 text-sm hover:bg-muted"
