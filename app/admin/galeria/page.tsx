@@ -1,9 +1,11 @@
+import Image from "next/image";
 import { asc } from "drizzle-orm";
 
 import { getDb, schema } from "@/lib/db";
+import { getAssetPublicUrl } from "@/lib/storage";
 
-import { RowDeleteButton } from "../disponibilidade/row-delete-button";
-import { addGalleryPhoto, deleteGalleryPhoto } from "./actions";
+import { PhotoRowActions } from "./photo-row-actions";
+import { UploadForm } from "./upload-form";
 
 export const metadata = { title: "Galeria" };
 export const dynamic = "force-dynamic";
@@ -47,99 +49,58 @@ export default async function GalleryAdminPage() {
       <div>
         <h1 className="text-2xl font-semibold">Galeria</h1>
         <p className="text-sm text-muted-foreground">
-          As fotos ficam no bucket Supabase Storage. Aqui cadastramos o caminho
-          (path) que o frontend renderiza via URL assinada ou pública.
+          Fotos do espaço e dos eventos. Faça upload direto pelo painel —
+          a foto é otimizada e servida via Supabase Storage com CDN.
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {photos.length === 0 && (
-          <p className="rounded-lg border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground sm:col-span-full">
-            Nenhuma foto cadastrada.
-          </p>
+      <UploadForm eventTypes={types} />
+
+      <section>
+        <h2 className="mb-3 font-semibold">
+          Fotos cadastradas{" "}
+          <span className="text-sm font-normal text-muted-foreground">
+            ({photos.length})
+          </span>
+        </h2>
+
+        {photos.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border bg-card p-10 text-center">
+            <p className="text-sm text-muted-foreground">
+              Nenhuma foto ainda. Faça o primeiro upload acima.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {photos.map((p) => (
+              <figure
+                key={p.id}
+                className="overflow-hidden rounded-lg border border-border bg-card"
+              >
+                <div className="relative aspect-[4/3] bg-muted">
+                  <Image
+                    src={getAssetPublicUrl(p.storagePath)}
+                    alt={p.altText ?? "Foto da galeria"}
+                    fill
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="object-cover"
+                  />
+                  {p.featured && (
+                    <span className="absolute right-2 top-2 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-900 shadow">
+                      ⭐ Destaque
+                    </span>
+                  )}
+                </div>
+                <figcaption className="space-y-2 p-3 text-xs">
+                  <p className="text-muted-foreground line-clamp-2">
+                    {p.altText ?? <em>(sem texto alternativo)</em>}
+                  </p>
+                  <PhotoRowActions id={p.id} initialFeatured={p.featured} />
+                </figcaption>
+              </figure>
+            ))}
+          </div>
         )}
-        {photos.map((p) => (
-          <figure key={p.id} className="overflow-hidden rounded-lg border border-border bg-card">
-            <div className="aspect-[4/3] bg-muted" />
-            <figcaption className="space-y-1 p-3 text-xs">
-              <p className="truncate font-mono" title={p.storagePath}>
-                {p.storagePath}
-              </p>
-              {p.altText && (
-                <p className="text-muted-foreground">alt: {p.altText}</p>
-              )}
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-[10px] text-muted-foreground">
-                  ordem {p.displayOrder} {p.featured && "· ⭐ destaque"}
-                </span>
-                <RowDeleteButton id={p.id} action={deleteGalleryPhoto} />
-              </div>
-            </figcaption>
-          </figure>
-        ))}
-      </div>
-
-      <section className="rounded-lg border border-border bg-card p-5">
-        <h2 className="font-semibold">Adicionar foto</h2>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Faça o upload no bucket <code className="rounded bg-muted px-1 py-0.5">gallery/</code>{" "}
-          do Supabase Storage e cole o path aqui.
-        </p>
-        <form
-          action={async (fd) => {
-            "use server";
-            await addGalleryPhoto(fd);
-          }}
-          className="mt-4 grid gap-3 sm:grid-cols-2"
-        >
-          <label className="col-span-full flex flex-col gap-1 text-xs">
-            <span className="font-medium">Path no bucket</span>
-            <input
-              name="storagePath"
-              required
-              placeholder="gallery/2026/casamento-ana-pedro.jpg"
-              className="h-10 rounded-md border border-border bg-background px-3 text-sm font-mono"
-            />
-          </label>
-          <label className="col-span-full flex flex-col gap-1 text-xs">
-            <span className="font-medium">Texto alternativo (SEO + acessibilidade)</span>
-            <input
-              name="altText"
-              placeholder="Salão principal iluminado para a entrada dos noivos"
-              className="h-10 rounded-md border border-border bg-background px-3 text-sm"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs">
-            <span className="font-medium">Tipo de evento (opcional)</span>
-            <select
-              name="eventTypeId"
-              className="h-10 rounded-md border border-border bg-background px-2 text-sm"
-            >
-              <option value="">—</option>
-              {types.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-xs">
-            <span className="font-medium">Ordem</span>
-            <input
-              name="displayOrder"
-              type="number"
-              defaultValue={0}
-              className="h-10 rounded-md border border-border bg-background px-3 text-sm"
-            />
-          </label>
-          <label className="col-span-full inline-flex items-center gap-2 text-sm">
-            <input type="checkbox" name="featured" className="size-4" /> Marcar como
-            destaque na home
-          </label>
-          <button className="col-span-full h-10 rounded-md bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90">
-            Salvar
-          </button>
-        </form>
       </section>
     </div>
   );
