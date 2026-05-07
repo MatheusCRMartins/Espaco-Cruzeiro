@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input, Label, Textarea } from "@/components/ui/input";
@@ -44,6 +45,11 @@ export function EventTypeForm({
   );
   const fe = state.fieldErrors;
   const v = initial ?? {};
+
+  useEffect(() => {
+    if (state.status === "ok") toast.success(state.message ?? "Salvo.");
+    else if (state.status === "error" && state.message) toast.error(state.message);
+  }, [state]);
 
   return (
     <form action={formAction} className="space-y-5 rounded-lg border border-border bg-card p-5">

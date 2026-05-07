@@ -20,6 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2, Pencil, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn, formatBRL } from "@/lib/utils";
@@ -159,6 +160,9 @@ export function EventTypesList({ items }: { items: EventTypeListItem[] }) {
       if (!result.ok) {
         setList(items); // rollback
         setError("Não consegui salvar a nova ordem. Tente de novo.");
+        toast.error("Não consegui salvar a nova ordem.");
+      } else {
+        toast.success("Ordem atualizada.");
       }
     });
   }
@@ -174,6 +178,9 @@ export function EventTypesList({ items }: { items: EventTypeListItem[] }) {
       if (!result.ok) {
         setList(items); // rollback
         setError("Não consegui atualizar o status.");
+        toast.error("Não consegui atualizar o status.");
+      } else {
+        toast.success(currentActive ? "Tipo ocultado." : "Tipo publicado.");
       }
     });
   }
@@ -184,13 +191,15 @@ export function EventTypesList({ items }: { items: EventTypeListItem[] }) {
 
   async function confirmDelete() {
     if (!pendingDelete) return;
-    const { id } = pendingDelete;
+    const { id, name } = pendingDelete;
     const result = await deleteEventType(id);
     if (result.ok) {
       setList((cur) => cur.filter((it) => it.id !== id));
       setError(null);
+      toast.success(`"${name}" excluído.`);
     } else {
       setError(result.error ?? "Não consegui excluir.");
+      toast.error(result.error ?? "Não consegui excluir.");
     }
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Textarea } from "@/components/ui/input";
@@ -38,6 +39,8 @@ export function BookingActionsPanel({
     start(async () => {
       setMsg(null);
       const r = await action();
+      if (r.ok) toast.success(success);
+      else toast.error(`Erro: ${r.error ?? "desconhecido"}`);
       setMsg(r.ok ? success : `Erro: ${r.error ?? "desconhecido"}`);
     });
   };
@@ -114,6 +117,8 @@ export function BookingActionsPanel({
         confirmLabel="Confirmar reserva"
         onConfirm={async () => {
           const r = await forceConfirmBooking(bookingId);
+          if (r.ok) toast.success("Reserva confirmada.");
+          else toast.error(`Erro: ${r.error ?? "desconhecido"}`);
           setMsg(r.ok ? "Reserva confirmada." : `Erro: ${r.error ?? "desconhecido"}`);
         }}
       />
@@ -126,6 +131,8 @@ export function BookingActionsPanel({
         confirmLabel="Marcar realizada"
         onConfirm={async () => {
           const r = await markBookingCompleted(bookingId);
+          if (r.ok) toast.success("Marcada como realizada.");
+          else toast.error(`Erro: ${r.error ?? "desconhecido"}`);
           setMsg(r.ok ? "Marcada como realizada." : `Erro: ${r.error ?? "desconhecido"}`);
         }}
       />
@@ -157,6 +164,8 @@ export function BookingActionsPanel({
             bookingId,
             cancelReason.trim() || "(sem motivo informado)",
           );
+          if (r.ok) toast.success("Reserva cancelada.");
+          else toast.error(`Erro: ${r.error ?? "desconhecido"}`);
           setMsg(r.ok ? "Reserva cancelada." : `Erro: ${r.error ?? "desconhecido"}`);
         }}
       />

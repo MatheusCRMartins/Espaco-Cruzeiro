@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Star, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
@@ -29,13 +30,21 @@ export function PhotoRowActions({
       if (!r.ok) {
         setFeatured(!next);
         setError("Não consegui atualizar.");
+        toast.error("Não consegui atualizar o destaque.");
+      } else {
+        toast.success(next ? "Marcada como destaque." : "Destaque removido.");
       }
     });
   }
 
   async function onConfirmDelete() {
     const r = await deleteGalleryPhoto(id);
-    if (!r.ok) setError(r.error ?? "Não consegui excluir.");
+    if (!r.ok) {
+      setError(r.error ?? "Não consegui excluir.");
+      toast.error(r.error ?? "Não consegui excluir.");
+    } else {
+      toast.success("Foto removida.");
+    }
   }
 
   return (

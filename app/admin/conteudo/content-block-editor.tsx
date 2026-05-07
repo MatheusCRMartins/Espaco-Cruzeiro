@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { GripVertical, Plus, Trash2, ChevronDown, Save } from "lucide-react";
+import { toast } from "sonner";
 
 import { RichTextEditor } from "@/components/admin/rich-text-editor";
 import { Button } from "@/components/ui/button";
@@ -53,16 +54,10 @@ export function ContentBlockEditor({
     SAVE_BLOCK_INITIAL,
   );
 
-  // Reset feedback quando o estado salva com sucesso
   useEffect(() => {
-    if (state.status === "ok") {
-      const t = setTimeout(() => {
-        // efeito visual: faz a mensagem sumir após 4s manualmente?
-        // useActionState não tem reset; deixa lá até próximo submit.
-      }, 4000);
-      return () => clearTimeout(t);
-    }
-  }, [state.status]);
+    if (state.status === "ok") toast.success(state.message ?? "Salvo.");
+    else if (state.status === "error" && state.message) toast.error(state.message);
+  }, [state]);
 
   function updateObject(path: string, value: unknown) {
     setObjectState((prev) => ({ ...prev, [path]: value }));

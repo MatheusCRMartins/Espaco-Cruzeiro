@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -50,6 +51,11 @@ export function BusinessSettingsForm({
     SAVE_SETTINGS_INITIAL,
   );
   const fe = state.fieldErrors;
+
+  useEffect(() => {
+    if (state.status === "ok") toast.success(state.message ?? "Configurações salvas.");
+    else if (state.status === "error" && state.message) toast.error(state.message);
+  }, [state]);
 
   const [hours, setHours] = useState(initial.hours);
   function addHourRow() {

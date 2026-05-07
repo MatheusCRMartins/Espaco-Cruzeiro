@@ -42,7 +42,16 @@ const anon = createClient(url, anonKey, {
 
 type Expectation = "readable" | "blocked";
 
-async function probe(label: string, expectation: Expectation, run: () => Promise<{ data: unknown[] | null; error: { message: string; code?: string } | null }>) {
+type ProbeResult = {
+  data: unknown[] | null;
+  error: { message: string; code?: string } | null;
+};
+
+async function probe(
+  label: string,
+  expectation: Expectation,
+  run: () => PromiseLike<ProbeResult>,
+) {
   const { data, error } = await run();
   const rows = Array.isArray(data) ? data.length : 0;
 

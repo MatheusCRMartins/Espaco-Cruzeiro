@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
@@ -23,7 +24,12 @@ export function TestimonialRowActions({
         disabled={pending}
         onClick={() =>
           start(async () => {
-            await toggleTestimonial(id, !approved);
+            const r = await toggleTestimonial(id, !approved);
+            if (r.ok) {
+              toast.success(approved ? "Despublicado." : "Publicado no site.");
+            } else {
+              toast.error("Não consegui atualizar.");
+            }
           })
         }
         className="rounded border border-border px-2 py-1 hover:bg-muted"
@@ -47,7 +53,9 @@ export function TestimonialRowActions({
         confirmLabel="Excluir"
         destructive
         onConfirm={async () => {
-          await deleteTestimonial(id);
+          const r = await deleteTestimonial(id);
+          if (r.ok) toast.success("Depoimento excluído.");
+          else toast.error("Não consegui excluir.");
         }}
       />
     </div>

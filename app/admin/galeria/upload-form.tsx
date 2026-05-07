@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Upload } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -31,12 +32,17 @@ export function UploadForm({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
 
-  // Reset preview quando o servidor confirma sucesso
-  if (state.status === "ok" && previewUrl) {
-    setPreviewUrl(null);
-    setFileName(null);
-    if (fileRef.current) fileRef.current.value = "";
-  }
+  // Reset preview + toast quando o servidor confirma resultado
+  useEffect(() => {
+    if (state.status === "ok") {
+      toast.success(state.message ?? "Foto adicionada.");
+      setPreviewUrl(null);
+      setFileName(null);
+      if (fileRef.current) fileRef.current.value = "";
+    } else if (state.status === "error" && state.message) {
+      toast.error(state.message);
+    }
+  }, [state]);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
