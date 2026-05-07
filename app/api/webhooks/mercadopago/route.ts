@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { getDb, schema } from "@/lib/db";
 import { getMercadoPago } from "@/lib/mercadopago/client";
@@ -103,7 +103,32 @@ export async function POST(request: Request) {
 
   try {
     if (paymentStatus === "approved") {
-      await confirmBooking(bookingId, paymentIdStr, paymentStatus);
+      // Race-safe: só confirma e dispara e-mails se a transição ACONTECEU
+      // agora. Dois webhooks simultâneos pra mesma payment não disparam
+      // 2 e-mails — o segundo bate UPDATE com WHERE status='pending_payment',
+      // já viu 'confirmed', rowCount=0, e cai no return idempotent.
+      const db2 = getDb();
+      const transitioned = await db2
+        .update(schema.bookings)
+        .set({
+          status: "confirmed",
+          paymentId: paymentIdStr,
+          paymentStatus,
+          confirmedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(schema.bookings.id, bookingId),
+            eq(schema.bookings.status, "pending_payment"),
+          ),
+        )
+        .returning({ id: schema.bookings.id });
+
+      if (transitioned.length === 0) {
+        // já tava confirmado por outro webhook
+        return NextResponse.json({ received: true, idempotent: true });
+      }
 
       const settings = await getBusinessSettings();
       // Notifica admin + cliente (best-effort)

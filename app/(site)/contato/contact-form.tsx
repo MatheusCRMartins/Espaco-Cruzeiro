@@ -50,6 +50,7 @@ export function ContactForm() {
             id="name"
             name="name"
             required
+            autoComplete="name"
             placeholder="Como devemos te chamar?"
             aria-invalid={!!fe?.name}
           />
@@ -62,6 +63,7 @@ export function ContactForm() {
             name="phone"
             required
             inputMode="tel"
+            autoComplete="tel"
             placeholder="(11) 99999-9999"
             aria-invalid={!!fe?.phone}
           />
@@ -76,6 +78,7 @@ export function ContactForm() {
           name="email"
           type="email"
           required
+          autoComplete="email"
           placeholder="seu@email.com"
           aria-invalid={!!fe?.email}
         />

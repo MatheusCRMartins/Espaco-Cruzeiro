@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, gte, lt, sql } from "drizzle-orm";
+import { and, eq, gte, lt, lte, sql } from "drizzle-orm";
 
 import { getDb, schema } from "@/lib/db";
 
@@ -109,4 +109,32 @@ export async function markPaymentFailed(bookingId: string, paymentStatus: string
       updatedAt: new Date(),
     })
     .where(eq(schema.bookings.id, bookingId));
+}
+
+/**
+ * Cancela bookings em pending_payment cuja soft_lock expirou na data.
+ * Roda ANTES de tentar inserir nova reserva pra mesma data — sem isso,
+ * o partial unique index `bookings_active_date_uq` rejeitaria mesmo
+ * quando o lock antigo já está vencido.
+ */
+export async function sweepExpiredLocksForDate(eventDate: string) {
+  const db = getDb();
+  const now = new Date();
+  const result = await db
+    .update(schema.bookings)
+    .set({
+      status: "cancelled",
+      cancelledAt: now,
+      adminNotes: "auto-cancelled: soft_lock expired",
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(schema.bookings.eventDate, eventDate),
+        eq(schema.bookings.status, "pending_payment"),
+        lte(schema.bookings.softLockExpiresAt, now),
+      ),
+    )
+    .returning({ id: schema.bookings.id });
+  return result.length;
 }

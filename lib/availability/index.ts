@@ -131,10 +131,24 @@ export async function getMonthAvailability(
 /**
  * Checagem server-authoritative feita antes de criar booking.
  * Retorna {ok: true} ou {ok: false, reason: "..."}.
+ *
+ * Se `eventStartTime` (HH:MM) e `durationHours` forem fornecidos, valida
+ * que o horário pedido cabe na janela da regra do dia (start..end).
+ *
+ * NOTA SOBRE RACE CONDITION: esta função NÃO faz lock. Dois bookings
+ * simultâneos pra mesma data passam aqui. A camada de defesa final é o
+ * partial unique index `bookings_active_date_uq` (migration 0004) — o
+ * INSERT do segundo lança UniqueViolation que o handler traduz em
+ * `date_unavailable`.
  */
 export async function assertDateAvailable(
   date: string, // YYYY-MM-DD
-): Promise<{ ok: true; startTime: string; endTime: string } | { ok: false; reason: DayStatus }> {
+  eventStartTime?: string, // HH:MM
+  durationHours?: number,
+): Promise<
+  | { ok: true; startTime: string; endTime: string }
+  | { ok: false; reason: DayStatus | "out_of_hours" }
+> {
   const d = new Date(`${date}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return { ok: false, reason: "unavailable" };
   const weekday = d.getUTCDay();
@@ -143,7 +157,12 @@ export async function assertDateAvailable(
   const [rule] = await db
     .select()
     .from(schema.availabilityRules)
-    .where(and(eq(schema.availabilityRules.weekday, weekday), eq(schema.availabilityRules.active, true)));
+    .where(
+      and(
+        eq(schema.availabilityRules.weekday, weekday),
+        eq(schema.availabilityRules.active, true),
+      ),
+    );
   if (!rule) return { ok: false, reason: "unavailable" };
 
   const [blocked] = await db
@@ -172,7 +191,25 @@ export async function assertDateAvailable(
   });
   if (isBooked) return { ok: false, reason: "booked" };
 
-  return { ok: true, startTime: rule.startTime.slice(0, 5), endTime: rule.endTime.slice(0, 5) };
+  const startHHMM = rule.startTime.slice(0, 5);
+  const endHHMM = rule.endTime.slice(0, 5);
+
+  // Valida horário pedido contra janela do dia
+  if (eventStartTime && durationHours) {
+    const toMin = (hhmm: string) => {
+      const [h, m] = hhmm.split(":").map(Number);
+      return h * 60 + m;
+    };
+    const ruleStart = toMin(startHHMM);
+    const ruleEnd = toMin(endHHMM);
+    const reqStart = toMin(eventStartTime);
+    const reqEnd = reqStart + durationHours * 60;
+    if (reqStart < ruleStart || reqEnd > ruleEnd) {
+      return { ok: false, reason: "out_of_hours" };
+    }
+  }
+
+  return { ok: true, startTime: startHHMM, endTime: endHHMM };
 }
 
 // ---------------------------------------------------------------------------

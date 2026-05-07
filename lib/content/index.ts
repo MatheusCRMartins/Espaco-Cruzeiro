@@ -286,23 +286,23 @@ export async function setContentBlock(
   }
 
   const db = getDb();
-  const [existing] = await db
-    .select({ id: schema.contentBlocks.id })
-    .from(schema.contentBlocks)
-    .where(eq(schema.contentBlocks.key, key));
-
-  if (existing) {
-    await db
-      .update(schema.contentBlocks)
-      .set({ value: parsed.data as object, updatedBy, updatedAt: new Date() })
-      .where(eq(schema.contentBlocks.id, existing.id));
-  } else {
-    await db.insert(schema.contentBlocks).values({
+  // Atomic upsert — evita race com SELECT+INSERT que daria UniqueViolation
+  // em saves simultâneos do mesmo bloco.
+  await db
+    .insert(schema.contentBlocks)
+    .values({
       key,
       value: parsed.data as object,
       updatedBy,
+    })
+    .onConflictDoUpdate({
+      target: schema.contentBlocks.key,
+      set: {
+        value: parsed.data as object,
+        updatedBy,
+        updatedAt: new Date(),
+      },
     });
-  }
 
   invalidateContentCache(key);
   return { ok: true };

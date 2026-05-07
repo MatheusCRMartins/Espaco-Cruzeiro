@@ -83,6 +83,16 @@ const RLS_SQL = /* sql */ `
   -- bookings, leads, notifications_log, admin_audit_log:
   -- nenhuma policy = ninguém via PostgREST acessa.
   -- service_role (servidor) bypassa RLS por padrão.
+
+  -- Partial unique index: previne race de duas reservas ativas
+  -- (confirmed ou pending_payment) pra mesma data. INSERT do segundo
+  -- lança SQLSTATE 23505 que app/api/bookings traduz em 409.
+  -- Postgres não aceita now() em WHERE de partial index → app faz
+  -- sweep de pending_payment com lock expirado antes do INSERT
+  -- (lib/bookings/service.ts/sweepExpiredLocksForDate).
+  CREATE UNIQUE INDEX IF NOT EXISTS bookings_active_date_uq
+    ON bookings (event_date)
+    WHERE status IN ('confirmed', 'pending_payment');
 `;
 
 const SEED_SQL = /* sql */ `

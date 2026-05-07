@@ -1,10 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export type GalleryPhotoData = {
   id: string;
@@ -30,6 +33,7 @@ export function GalleryGrid({
   layout?: "default" | "compact-4";
 }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const lightboxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (activeIndex === null) return;
@@ -39,6 +43,21 @@ export function GalleryGrid({
         setActiveIndex((i) => (i === null ? null : Math.min(photos.length - 1, i + 1)));
       if (e.key === "ArrowLeft")
         setActiveIndex((i) => (i === null ? null : Math.max(0, i - 1)));
+      // Focus trap
+      if (e.key === "Tab" && lightboxRef.current) {
+        const focusables = lightboxRef.current.querySelectorAll<HTMLElement>(FOCUSABLE);
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement as HTMLElement | null;
+        if (e.shiftKey && active === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && active === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     }
     document.addEventListener("keydown", onKey);
     document.body.style.overflow = "hidden";
@@ -97,9 +116,11 @@ export function GalleryGrid({
 
       {active !== null && activeIndex !== null && (
         <div
+          ref={lightboxRef}
           role="dialog"
           aria-modal="true"
           aria-label="Galeria"
+          tabIndex={-1}
           className="fixed inset-0 z-50 grid grid-rows-[auto_1fr_auto] bg-black/95 backdrop-blur-sm"
         >
           <header className="flex items-center justify-between p-4 text-white/80">

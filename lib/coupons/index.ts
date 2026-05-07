@@ -80,20 +80,78 @@ export async function checkCoupon(rawCode: string): Promise<CouponCheckResult> {
 }
 
 /**
- * Incrementa usedCount atomicamente. Chamado depois do booking ser inserido.
- * Não falha (best-effort): se o cupom foi removido entre o check e o uso,
- * só log e segue (booking já tem o desconto persistido).
+ * Reserva atomicamente UM uso do cupom — chame ANTES de criar o booking.
+ *
+ * Faz `UPDATE ... SET used_count = used_count + 1 WHERE code AND active AND
+ * janela válida AND saldo de usos > 0` RETURNING id. Se rowCount === 1,
+ * conseguimos o uso. Se 0, alguém estourou o limite ou o cupom virou
+ * inválido — recusa antes do booking entrar.
+ *
+ * Resolve race onde dois bookings simultâneos com `maxUses=1` ambos passavam
+ * pelo checkCoupon (viam 0 usos), ambos inseriam, e o increment fire-and-
+ * forget acabava com `used_count = 2`.
  */
-export async function incrementCouponUse(code: string) {
+export async function reserveCouponUse(
+  code: string,
+): Promise<
+  | { ok: true; percentOff: number }
+  | {
+      ok: false;
+      reason: "not_found" | "inactive" | "expired" | "exhausted" | "not_yet_valid";
+    }
+> {
+  const db = getDb();
+  const now = new Date();
+  const result = await db
+    .update(schema.coupons)
+    .set({
+      usedCount: sql`${schema.coupons.usedCount} + 1`,
+      updatedAt: now,
+    })
+    .where(
+      sql`code = ${code}
+        AND active = true
+        AND (valid_from IS NULL OR valid_from <= ${now})
+        AND (valid_until IS NULL OR valid_until >= ${now})
+        AND (max_uses IS NULL OR used_count < max_uses)`,
+    )
+    .returning({ id: schema.coupons.id, percentOff: schema.coupons.percentOff });
+
+  if (result.length === 1) {
+    return { ok: true, percentOff: result[0].percentOff };
+  }
+
+  // Falhou — diagnostica pra mensagem humana
+  const diag = await checkCoupon(code);
+  if (!diag.ok) {
+    if (diag.reason === "invalid_format") return { ok: false, reason: "not_found" };
+    return { ok: false, reason: diag.reason };
+  }
+  return { ok: false, reason: "exhausted" };
+}
+
+/**
+ * Devolve um uso do cupom — usado em rollback se o booking falhar depois
+ * de reservar mas antes de persistir.
+ */
+export async function releaseCouponUse(code: string) {
   try {
     const db = getDb();
     await db
       .update(schema.coupons)
-      .set({ usedCount: sql`${schema.coupons.usedCount} + 1`, updatedAt: new Date() })
+      .set({
+        usedCount: sql`GREATEST(${schema.coupons.usedCount} - 1, 0)`,
+        updatedAt: new Date(),
+      })
       .where(eq(schema.coupons.code, code));
   } catch (err) {
-    console.error("[coupons] failed to increment use count:", err);
+    console.error("[coupons] failed to release use:", err);
   }
+}
+
+/** @deprecated — use reserveCouponUse antes do INSERT. Mantido por compat. */
+export async function incrementCouponUse(code: string) {
+  return reserveCouponUse(code);
 }
 
 /**

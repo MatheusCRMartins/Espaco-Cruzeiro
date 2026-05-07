@@ -6,19 +6,35 @@ import {
   computeAmount,
   generateBookingCode,
   softLockExpiresAtIso,
+  sweepExpiredLocksForDate,
 } from "@/lib/bookings/service";
-import {
-  applyPercentOff,
-  checkCoupon,
-  incrementCouponUse,
-} from "@/lib/coupons";
+import { applyPercentOff, releaseCouponUse, reserveCouponUse } from "@/lib/coupons";
 import { getDb, schema } from "@/lib/db";
 import { createBookingPreference } from "@/lib/mercadopago/preference";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { bookingInputSchema } from "@/lib/validations/booking";
 import { serverEnv } from "@/lib/env";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/**
+ * Bloqueia POSTs cross-origin. Server Actions têm proteção nativa do Next,
+ * mas routes /api precisam validar Origin manualmente pra evitar que
+ * sites de terceiros criem reservas que bloqueiam datas reais.
+ */
+function isOriginAllowed(request: Request): boolean {
+  const origin = request.headers.get("origin");
+  if (!origin) return true; // server-to-server / curl não envia Origin
+  try {
+    const allowed = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+    const a = new URL(allowed);
+    const o = new URL(origin);
+    return a.host === o.host && a.protocol === o.protocol;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * POST /api/bookings — cria uma reserva em estado `pending_payment` e retorna
@@ -36,6 +52,28 @@ export const dynamic = "force-dynamic";
  * Erros → 4xx com código legível; inconsistências operacionais → 500.
  */
 export async function POST(request: Request) {
+  // 0a. CORS check
+  if (!isOriginAllowed(request)) {
+    return NextResponse.json({ error: "forbidden_origin" }, { status: 403 });
+  }
+
+  // 0b. Rate-limit (defesa contra spam de bookings que travam datas)
+  const ip = getClientIp(request.headers);
+  const ipResult = await rateLimit({
+    key: `bookings:ip:${ip}`,
+    limit: 5,
+    windowSeconds: 60 * 10,
+  });
+  if (!ipResult.ok) {
+    return NextResponse.json(
+      { error: "rate_limited", retryAfterSeconds: ipResult.retryAfterSeconds },
+      {
+        status: 429,
+        headers: { "Retry-After": String(ipResult.retryAfterSeconds) },
+      },
+    );
+  }
+
   let json: unknown;
   try {
     json = await request.json();
@@ -52,16 +90,7 @@ export async function POST(request: Request) {
   }
   const input = parsed.data;
 
-  // 2. availability
-  const availability = await assertDateAvailable(input.eventDate);
-  if (!availability.ok) {
-    return NextResponse.json(
-      { error: "date_unavailable", reason: availability.reason },
-      { status: 409 },
-    );
-  }
-
-  // 3. event type
+  // 3. event type (carrega antes de availability pra ter durationHours)
   const db = getDb();
   const [eventType] = await db
     .select()
@@ -93,6 +122,23 @@ export async function POST(request: Request) {
     );
   }
 
+  // 2a. Sweep locks expirados pra data — libera o partial unique index
+  // se o último booking ali caducou.
+  await sweepExpiredLocksForDate(input.eventDate);
+
+  // 2b. availability + slot validation
+  const availability = await assertDateAvailable(
+    input.eventDate,
+    input.eventStartTime.slice(0, 5),
+    eventType.durationHours ?? 6,
+  );
+  if (!availability.ok) {
+    return NextResponse.json(
+      { error: "date_unavailable", reason: availability.reason },
+      { status: 409 },
+    );
+  }
+
   // 4. amount
   let { totalAmount, depositAmount, payableNow } = computeAmount({
     guestsCount: input.guestsCount,
@@ -100,24 +146,22 @@ export async function POST(request: Request) {
     paymentType: input.paymentType,
   });
 
-  // 4b. coupon (opcional)
+  // 4b. coupon (opcional) — reserva atomicamente ANTES do INSERT
   let appliedCoupon: { code: string; discount: number } | null = null;
   if (input.couponCode) {
-    const couponResult = await checkCoupon(input.couponCode);
-    if (!couponResult.ok) {
+    const reserved = await reserveCouponUse(input.couponCode);
+    if (!reserved.ok) {
       return NextResponse.json(
-        { error: "coupon_invalid", reason: couponResult.reason, message: couponResult.message },
+        { error: "coupon_invalid", reason: reserved.reason },
         { status: 400 },
       );
     }
-    const { discount, totalAfter } = applyPercentOff(totalAmount, couponResult.percentOff);
-    appliedCoupon = { code: couponResult.code, discount };
+    const { discount, totalAfter } = applyPercentOff(totalAmount, reserved.percentOff);
+    appliedCoupon = { code: input.couponCode, discount };
     totalAmount = totalAfter;
-    // Recalcula deposit/payableNow proporcionalmente
-    const ratio = totalAfter > 0 ? totalAfter / (totalAfter + discount) : 1;
-    depositAmount = Math.round(depositAmount * ratio * 100) / 100;
-    payableNow =
-      input.paymentType === "full" ? totalAfter : depositAmount;
+    // Recalcula deposit direto de totalAfter (mais simples, sem cents perdidos)
+    depositAmount = Math.round(totalAfter * 0.3 * 100) / 100;
+    payableNow = input.paymentType === "full" ? totalAfter : depositAmount;
   }
 
   // 5. insert booking
@@ -157,14 +201,21 @@ export async function POST(request: Request) {
       })
       .returning({ id: schema.bookings.id });
     bookingId = inserted.id;
-  } catch (err) {
-    console.error("[bookings] insert failed:", err);
+  } catch (err: unknown) {
+    // Detecta UniqueViolation do partial index `bookings_active_date_uq`:
+    // outra reserva ativa pegou a mesma data entre o assertDateAvailable
+    // e o INSERT. Resposta humana (409) e rollback do cupom.
+    const code = (err as { code?: string })?.code;
+    const isUnique = code === "23505";
+    if (appliedCoupon) void releaseCouponUse(appliedCoupon.code);
+    if (isUnique) {
+      return NextResponse.json(
+        { error: "date_unavailable", reason: "booked" },
+        { status: 409 },
+      );
+    }
+    console.error("[bookings] insert failed:", code ?? "no_code");
     return NextResponse.json({ error: "internal_error" }, { status: 500 });
-  }
-
-  // Incrementa uso do cupom (best-effort, não bloqueia o fluxo)
-  if (appliedCoupon) {
-    void incrementCouponUse(appliedCoupon.code);
   }
 
   // 6. Mercado Pago preference (se configurado)

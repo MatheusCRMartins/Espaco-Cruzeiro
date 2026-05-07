@@ -382,6 +382,7 @@ export function ReservarFlow({ eventTypes }: Props) {
                     value={form.name}
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                     required
+                    autoComplete="name"
                   />
                 </div>
                 <div>
@@ -392,6 +393,7 @@ export function ReservarFlow({ eventTypes }: Props) {
                     value={form.email}
                     onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                     required
+                    autoComplete="email"
                   />
                 </div>
                 <div>
@@ -399,6 +401,7 @@ export function ReservarFlow({ eventTypes }: Props) {
                   <Input
                     id="phone"
                     inputMode="tel"
+                    autoComplete="tel"
                     value={form.phone}
                     onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                     placeholder="(11) 99999-9999"

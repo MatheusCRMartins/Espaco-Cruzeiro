@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getMonthAvailability } from "@/lib/availability";
+import { getClientIp, rateLimit } from "@/lib/rate-limit";
 import { availabilityQuerySchema } from "@/lib/validations/booking";
 
 export const runtime = "nodejs";
@@ -16,6 +17,20 @@ export const dynamic = "force-dynamic";
  * filtrar availability_rules por event_type_id.
  */
 export async function GET(request: Request) {
+  // Rate-limit por IP — endpoint público que toca DB; previne scraping
+  const ip = getClientIp(request.headers);
+  const rl = await rateLimit({
+    key: `availability:${ip}`,
+    limit: 60,
+    windowSeconds: 60,
+  });
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "rate_limited", retryAfterSeconds: rl.retryAfterSeconds },
+      { status: 429 },
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const parsed = availabilityQuerySchema.safeParse({
     eventTypeId: searchParams.get("eventTypeId") ?? "",

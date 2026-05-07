@@ -33,7 +33,17 @@ export async function GET(request: Request) {
 
   const result = await checkCoupon(code);
   if (!result.ok) {
-    return NextResponse.json(result, { status: 200 });
+    // Anti-enumeration: não revelamos se o código não existe vs expirou
+    // vs está desativado. Logamos o detalhe server-side pra auditoria.
+    console.info("[coupons] check failed", {
+      reason: result.reason,
+      // não logamos `code` literal pra não criar lista enumerável nos logs
+      codeLength: code.length,
+    });
+    return NextResponse.json(
+      { ok: false, message: "Cupom inválido ou indisponível." },
+      { status: 200 },
+    );
   }
 
   return NextResponse.json(

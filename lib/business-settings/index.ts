@@ -141,23 +141,14 @@ export async function updateBusinessSettings(
   const parsed = businessSettingsSchema.parse(merged);
 
   const db = getDb();
-  const [existing] = await db
-    .select({ id: schema.businessSettings.id })
-    .from(schema.businessSettings)
-    .where(eq(schema.businessSettings.key, "default"));
-
-  if (existing) {
-    await db
-      .update(schema.businessSettings)
-      .set({ data: parsed, updatedBy, updatedAt: new Date() })
-      .where(eq(schema.businessSettings.id, existing.id));
-  } else {
-    await db.insert(schema.businessSettings).values({
-      key: "default",
-      data: parsed,
-      updatedBy,
+  // Atomic upsert via ON CONFLICT — evita race com SELECT+INSERT.
+  await db
+    .insert(schema.businessSettings)
+    .values({ key: "default", data: parsed, updatedBy })
+    .onConflictDoUpdate({
+      target: schema.businessSettings.key,
+      set: { data: parsed, updatedBy, updatedAt: new Date() },
     });
-  }
 
   invalidateBusinessSettingsCache();
   return parsed;

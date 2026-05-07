@@ -77,13 +77,16 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match all paths except:
-     *  - _next/static, _next/image (assets)
-     *  - favicon / robots / sitemap / public images
-     *  - static file extensions
-     */
-    "/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:png|jpg|jpeg|gif|svg|webp|avif)$).*)",
-  ],
+  /**
+   * Antes: matcher rodava em quase todo path, fazendo Supabase auth refresh
+   * em qualquer request pública (incluindo /api/webhooks/mercadopago e
+   * /api/bookings). Custo: latência + DoS amplificado, e o webhook MP quebra
+   * se o Supabase ficar indisponível.
+   *
+   * Agora: roda só em /admin/* e /api/admin/* (que é onde realmente precisa
+   * do refresh de cookie + role check). Login do admin é feito via Server
+   * Action (ver app/login/actions.ts) que cria o cookie diretamente; aqui
+   * só validamos sessão pra páginas e endpoints administrativos.
+   */
+  matcher: ["/admin/:path*", "/api/admin/:path*"],
 };

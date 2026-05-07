@@ -138,7 +138,17 @@ export function CalendarPicker({ eventTypeId, value, onChange }: Props) {
                 d.status === "booked" && "bg-muted/40",
                 d.status === "blocked" && "bg-muted/40",
               )}
-              aria-label={`${Number(d.date.split("-")[2])} · ${d.status}`}
+              aria-label={(() => {
+                const dayNum = Number(d.date.split("-")[2]);
+                const monthName = MONTH_LABELS[cursor.getMonth()];
+                if (d.status === "available") {
+                  return `${dayNum} de ${monthName}, disponível das ${d.startTime} às ${d.endTime}`;
+                }
+                if (d.status === "booked") return `${dayNum} de ${monthName}, já reservado`;
+                if (d.status === "blocked")
+                  return `${dayNum} de ${monthName}, data indisponível`;
+                return `${dayNum} de ${monthName}, fora do expediente`;
+              })()}
               title={
                 d.status === "available"
                   ? `Disponível das ${d.startTime} às ${d.endTime}`

@@ -41,7 +41,10 @@ export async function forceConfirmBooking(
 ): Promise<ActionResult> {
   const user = await requireAdmin();
   try {
-    await confirmBooking(bookingId, "manual", "manual_confirm");
+    // paymentId precisa ser único (uniqueIndex bookings_payment_id_uq).
+    // Antes usávamos "manual" hardcoded → 2ª confirmação manual de
+    // qualquer booking violava unique. Agora gera id estável por booking.
+    await confirmBooking(bookingId, `manual-${bookingId}`, "manual_confirm");
     await logAdminAction({
       userId: user.id,
       action: "force_confirm",
