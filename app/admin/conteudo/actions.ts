@@ -1,54 +1,52 @@
 "use server";
 
-import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { requireAdmin } from "@/app/admin/_lib/guard";
 import { logAdminAction } from "@/app/admin/_lib/audit";
-import { getDb, schema } from "@/lib/db";
+import { setContentBlock } from "@/lib/content";
 
-/** Upsert em content_blocks — value é sempre um JSON válido. */
-export async function saveContentBlock(formData: FormData) {
+export type SaveBlockState = {
+  status: "idle" | "ok" | "error";
+  message?: string;
+};
+
+export const SAVE_BLOCK_INITIAL: SaveBlockState = { status: "idle" };
+
+/**
+ * Server Action — salva um bloco de conteúdo do registry.
+ * O JSON vem serializado em formData.get("payload"); a chave em formData.get("key").
+ */
+export async function saveContentBlockAction(
+  _prev: SaveBlockState,
+  formData: FormData,
+): Promise<SaveBlockState> {
   const user = await requireAdmin();
   const key = String(formData.get("key") ?? "").trim();
-  const raw = String(formData.get("value") ?? "").trim();
-  if (!key) return { ok: false, error: "missing_key" };
-  let value: unknown;
+  const raw = String(formData.get("payload") ?? "");
+
+  if (!key) return { status: "error", message: "Chave obrigatória." };
+  if (!raw) return { status: "error", message: "Payload vazio." };
+
+  let parsed: unknown;
   try {
-    value = raw ? JSON.parse(raw) : null;
+    parsed = JSON.parse(raw);
   } catch {
-    return { ok: false, error: "invalid_json" };
+    return { status: "error", message: "JSON inválido." };
   }
 
-  try {
-    const db = getDb();
-    const [existing] = await db
-      .select({ id: schema.contentBlocks.id })
-      .from(schema.contentBlocks)
-      .where(eq(schema.contentBlocks.key, key));
-
-    if (existing) {
-      await db
-        .update(schema.contentBlocks)
-        .set({ value, updatedBy: user.id, updatedAt: new Date() })
-        .where(eq(schema.contentBlocks.id, existing.id));
-    } else {
-      await db.insert(schema.contentBlocks).values({
-        key,
-        value,
-        updatedBy: user.id,
-      });
-    }
-    await logAdminAction({
-      userId: user.id,
-      action: "save_content_block",
-      entityType: "content_block",
-      changes: { key },
-    });
-    revalidatePath("/admin/conteudo");
-    return { ok: true };
-  } catch (err) {
-    console.error("[admin] saveContentBlock failed:", err);
-    return { ok: false, error: "internal_error" };
+  const result = await setContentBlock(key, parsed, user.id);
+  if (!result.ok) {
+    return { status: "error", message: result.error };
   }
+
+  await logAdminAction({
+    userId: user.id,
+    action: "save_content_block",
+    entityType: "content_block",
+    changes: { key },
+  });
+  revalidatePath("/admin/conteudo");
+  revalidatePath("/", "layout");
+  return { status: "ok", message: "Bloco salvo." };
 }

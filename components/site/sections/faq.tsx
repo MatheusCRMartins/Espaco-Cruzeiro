@@ -5,9 +5,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { FAQS } from "@/lib/mock/faqs";
+import { getContentBlock } from "@/lib/content";
 
-export function Faq() {
+export async function Faq() {
+  const items = await getContentBlock("faq.items");
+  if (!items.length) return null;
+
   return (
     <Section>
       <Container>
@@ -24,10 +27,16 @@ export function Faq() {
           </div>
 
           <Accordion>
-            {FAQS.map((f) => (
+            {items.map((f) => (
               <AccordionItem key={f.question}>
                 <AccordionTrigger>{f.question}</AccordionTrigger>
-                <AccordionContent>{f.answer}</AccordionContent>
+                <AccordionContent>
+                  <div
+                    className="prose"
+                    // HTML do Tiptap, sanitizado em setContentBlock
+                    dangerouslySetInnerHTML={{ __html: f.answer }}
+                  />
+                </AccordionContent>
               </AccordionItem>
             ))}
           </Accordion>
