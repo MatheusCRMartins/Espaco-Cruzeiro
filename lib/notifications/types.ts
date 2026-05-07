@@ -8,7 +8,8 @@ export type NotificationTemplate =
   | "customer_booking_confirmed"
   | "customer_booking_cancelled"
   | "customer_reminder_d7"
-  | "customer_reminder_d1";
+  | "customer_reminder_d1"
+  | "customer_cart_recovery"; // booking ficou em pending_payment > 2h
 
 export interface NotificationPayload {
   recipient: string; // email address or phone number

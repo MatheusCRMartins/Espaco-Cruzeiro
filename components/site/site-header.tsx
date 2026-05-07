@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Menu, X } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
-import { cn, waLink } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/", label: "Início" },
@@ -18,13 +18,12 @@ const NAV = [
 
 export function SiteHeader({
   businessName,
-  whatsappNumber,
 }: {
   businessName: string;
-  whatsappNumber: string;
+  /** Mantido por compat com o layout — não usado no header pós Onda 4.1. */
+  whatsappNumber?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const waNumber = whatsappNumber;
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
@@ -49,14 +48,12 @@ export function SiteHeader({
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
-          <a
-            href={waLink(waNumber, "Olá! Tenho interesse em reservar o Espaço Cruzeiro.")}
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            href="/visita"
             className={buttonVariants({ variant: "outline", size: "sm" })}
           >
-            WhatsApp
-          </a>
+            Agendar visita
+          </Link>
           <Link href="/reservar" className={buttonVariants({ size: "sm" })}>
             Reservar
           </Link>
@@ -91,14 +88,13 @@ export function SiteHeader({
             </Link>
           ))}
           <div className="mt-4 flex gap-3 pb-2">
-            <a
-              href={waLink(waNumber, "Olá! Tenho interesse em reservar o Espaço Cruzeiro.")}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/visita"
+              onClick={() => setOpen(false)}
               className={cn(buttonVariants({ variant: "outline", size: "sm" }), "flex-1")}
             >
-              WhatsApp
-            </a>
+              Visitar
+            </Link>
             <Link
               href="/reservar"
               onClick={() => setOpen(false)}

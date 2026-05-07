@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, gt, inArray, lt, sql } from "drizzle-orm";
 
 import { getDb, schema } from "@/lib/db";
 import { serverEnv } from "@/lib/env";
@@ -45,12 +45,14 @@ export async function GET(request: Request) {
     ranAt: new Date().toISOString(),
     d7: { processed: 0, sent: 0, skipped: 0, failed: 0 },
     d1: { processed: 0, sent: 0, skipped: 0, failed: 0 },
+    cartRecovery: { processed: 0, sent: 0, skipped: 0, failed: 0 },
     errors: [] as Array<{ bookingId: string; template: string; error: string }>,
   };
 
   try {
     await processReminderBatch("customer_reminder_d7", d7, result.d7, result.errors);
     await processReminderBatch("customer_reminder_d1", d1, result.d1, result.errors);
+    await processCartRecovery(result.cartRecovery, result.errors);
   } catch (err) {
     console.error("[cron/reminders] fatal:", err);
     return NextResponse.json(
@@ -134,6 +136,101 @@ async function processReminderBatch(
           bookingId: b.id,
           template,
           error: result.error ?? "unknown",
+        });
+      }
+    } catch (err) {
+      counters.failed += 1;
+      errors.push({
+        bookingId: b.id,
+        template,
+        error: err instanceof Error ? err.message : "unknown",
+      });
+    }
+  }
+}
+
+/**
+ * Cart abandonment recovery — bookings em pending_payment criados há
+ * mais de 2h e menos de 24h, evento ainda no futuro, ainda sem
+ * notificação de recovery enviada.
+ *
+ * Critério de janela:
+ *  - 2h < createdAt < 24h: dá tempo de o usuário voltar pelo navegador
+ *    sem incomodar quem ainda está no checkout, e antes de virar lead frio.
+ */
+async function processCartRecovery(
+  counters: { processed: number; sent: number; skipped: number; failed: number },
+  errors: Array<{ bookingId: string; template: string; error: string }>,
+) {
+  const db = getDb();
+  const template: NotificationTemplate = "customer_cart_recovery";
+  const now = new Date();
+  const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+  const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const todayIso = now.toISOString().slice(0, 10);
+
+  const candidates = await db
+    .select({
+      id: schema.bookings.id,
+      bookingCode: schema.bookings.bookingCode,
+      customerName: schema.bookings.customerName,
+      customerEmail: schema.bookings.customerEmail,
+      eventDate: schema.bookings.eventDate,
+    })
+    .from(schema.bookings)
+    .where(
+      and(
+        eq(schema.bookings.status, "pending_payment"),
+        lt(schema.bookings.createdAt, twoHoursAgo),
+        gt(schema.bookings.createdAt, twentyFourHoursAgo),
+        sql`${schema.bookings.eventDate} >= ${todayIso}`,
+      ),
+    );
+
+  counters.processed = candidates.length;
+  if (!candidates.length) return;
+
+  const bookingIds = candidates.map((c) => c.id);
+  const alreadySent = await db
+    .select({ relatedBookingId: schema.notificationsLog.relatedBookingId })
+    .from(schema.notificationsLog)
+    .where(
+      and(
+        eq(schema.notificationsLog.type, template),
+        eq(schema.notificationsLog.status, "sent"),
+        inArray(schema.notificationsLog.relatedBookingId, bookingIds),
+      ),
+    );
+  const sentSet = new Set(alreadySent.map((r) => r.relatedBookingId));
+
+  const env = serverEnv();
+  for (const b of candidates) {
+    if (sentSet.has(b.id)) {
+      counters.skipped += 1;
+      continue;
+    }
+    try {
+      const r = await notify("email", {
+        recipient: b.customerEmail,
+        template,
+        data: {
+          customerName: b.customerName,
+          bookingCode: b.bookingCode,
+          // O link de checkout MP original é efêmero (depende da preferência
+          // criada no /api/bookings). Mandamos o /reservar como fallback —
+          // cliente refaz o fluxo. Em iteração futura: persistir checkoutUrl
+          // na booking e reusar aqui.
+          checkoutUrl: `${env.NEXT_PUBLIC_SITE_URL}/reservar`,
+        },
+        relatedBookingId: b.id,
+      });
+      if (r.ok) counters.sent += 1;
+      else {
+        counters.failed += 1;
+        errors.push({
+          bookingId: b.id,
+          template,
+          error: r.error ?? "unknown",
         });
       }
     } catch (err) {

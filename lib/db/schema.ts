@@ -216,6 +216,46 @@ export const testimonials = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Visits — agendamento de visita ao espaço (funil de conversão "antes de reservar")
+// ---------------------------------------------------------------------------
+export const visitStatusValues = [
+  "scheduled",
+  "completed",
+  "cancelled",
+  "no_show",
+] as const;
+
+export const visits = pgTable(
+  "visits",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    customerName: text("customer_name").notNull(),
+    customerEmail: text("customer_email").notNull(),
+    customerPhone: text("customer_phone").notNull(),
+    // tipo de evento que o cliente está pesquisando (opcional, pra
+    // pré-qualificar o atendimento)
+    eventTypeId: uuid("event_type_id").references(() => eventTypes.id, {
+      onDelete: "set null",
+    }),
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
+    durationMinutes: integer("duration_minutes").default(60).notNull(),
+    status: text("status").notNull().default("scheduled"),
+    notes: text("notes"),
+    adminNotes: text("admin_notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+  },
+  (t) => [
+    index("visits_scheduled_at_idx").on(t.scheduledAt),
+    index("visits_status_idx").on(t.status),
+    check(
+      "visits_status_check",
+      sql`status in ('scheduled','completed','cancelled','no_show')`,
+    ),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Coupons — códigos de desconto promocionais
 // ---------------------------------------------------------------------------
 export const coupons = pgTable(
@@ -320,3 +360,5 @@ export type LeadStatus = (typeof leadStatusValues)[number];
 export type BusinessSettings = typeof businessSettings.$inferSelect;
 export type Coupon = typeof coupons.$inferSelect;
 export type NewCoupon = typeof coupons.$inferInsert;
+export type Visit = typeof visits.$inferSelect;
+export type VisitStatus = (typeof visitStatusValues)[number];

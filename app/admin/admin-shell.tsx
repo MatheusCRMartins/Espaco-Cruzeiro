@@ -14,6 +14,7 @@ const NAV = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/calendario", label: "Calendário" },
   { href: "/admin/reservas", label: "Reservas" },
+  { href: "/admin/visitas", label: "Visitas" },
   { href: "/admin/leads", label: "Leads" },
   { href: "/admin/disponibilidade", label: "Disponibilidade" },
   { href: "/admin/tipos-evento", label: "Tipos de evento" },

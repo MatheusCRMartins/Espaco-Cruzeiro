@@ -13,6 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/sobre`, changeFrequency: "monthly", priority: 0.6, lastModified: now },
     { url: `${SITE_URL}/contato`, changeFrequency: "monthly", priority: 0.7, lastModified: now },
     { url: `${SITE_URL}/reservar`, changeFrequency: "weekly", priority: 0.9, lastModified: now },
+    { url: `${SITE_URL}/visita`, changeFrequency: "weekly", priority: 0.85, lastModified: now },
     { url: `${SITE_URL}/politica-de-privacidade`, changeFrequency: "yearly", priority: 0.3, lastModified: now },
     { url: `${SITE_URL}/termos-de-uso`, changeFrequency: "yearly", priority: 0.3, lastModified: now },
     { url: `${SITE_URL}/politica-de-cancelamento`, changeFrequency: "yearly", priority: 0.3, lastModified: now },

@@ -180,6 +180,21 @@ export function renderEmail(
       };
     }
 
+    case "customer_cart_recovery": {
+      const title = "Sua reserva está te esperando";
+      const body = `
+        <p>Olá, ${escape(String(d.customerName ?? ""))}!</p>
+        <p>Você começou uma reserva (<strong>${escape(String(d.bookingCode ?? ""))}</strong>) no ${escape(business.name)} mas ainda não finalizou o pagamento. Sua data fica trancada por mais um tempinho — depois disso ela volta pro calendário público.</p>
+        ${d.checkoutUrl ? button(String(d.checkoutUrl), "Concluir pagamento") : ""}
+        <p style="color:#666;font-size:13px;">Se desistiu, sem problema — só ignore esse e-mail. Mas se ficou alguma dúvida, responda aqui ou chame no WhatsApp.</p>
+      `;
+      return {
+        subject: "Sua reserva está te esperando",
+        html: layout(title, body, business),
+        text: `Sua reserva ${d.bookingCode} ainda está aberta. Finalize: ${d.checkoutUrl ?? ""}`,
+      };
+    }
+
     case "customer_reminder_d1": {
       const title = "Seu evento é amanhã!";
       const body = `
