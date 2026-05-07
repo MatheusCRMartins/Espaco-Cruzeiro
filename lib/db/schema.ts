@@ -212,6 +212,21 @@ export const testimonials = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Business settings — singleton (1 linha) com NAP, horários, redes, política.
+// Substitui lib/constants.ts hardcoded. Admin edita pelo painel.
+// ---------------------------------------------------------------------------
+export const businessSettings = pgTable("business_settings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  // chave fixa "default" — garantimos linha única via uniqueIndex.
+  // Permite no futuro multi-tenant se virar.
+  key: text("key").notNull().default("default"),
+  // tudo em JSONB pra evolução do schema sem migrations a cada campo
+  data: jsonb("data").notNull(),
+  updatedBy: uuid("updated_by"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [uniqueIndex("business_settings_key_uq").on(t.key)]);
+
+// ---------------------------------------------------------------------------
 // Editable content blocks (home copy, FAQ, etc.)
 // ---------------------------------------------------------------------------
 export const contentBlocks = pgTable(
@@ -270,3 +285,4 @@ export type NewLead = typeof leads.$inferInsert;
 export type BookingStatus = (typeof bookingStatusValues)[number];
 export type PaymentType = (typeof paymentTypeValues)[number];
 export type LeadStatus = (typeof leadStatusValues)[number];
+export type BusinessSettings = typeof businessSettings.$inferSelect;

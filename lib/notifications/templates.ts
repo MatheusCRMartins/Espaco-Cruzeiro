@@ -1,4 +1,4 @@
-import { BUSINESS } from "@/lib/constants";
+import type { BusinessSettingsData } from "@/lib/business-settings";
 
 import type { NotificationPayload, NotificationTemplate } from "./types";
 
@@ -10,7 +10,7 @@ type RenderedEmail = {
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://espacocruzeiro.com.br";
 
-function layout(title: string, bodyHtml: string) {
+function layout(title: string, bodyHtml: string, business: BusinessSettingsData) {
   return `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -25,7 +25,7 @@ function layout(title: string, bodyHtml: string) {
         <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px;background:#ffffff;border:1px solid #e6e1d4;border-radius:16px;overflow:hidden;">
           <tr>
             <td style="background:#1d3a2c;padding:24px 28px;color:#f6f1e5;">
-              <div style="letter-spacing:4px;text-transform:uppercase;font-size:11px;color:#d6b067;">${escape(BUSINESS.name)}</div>
+              <div style="letter-spacing:4px;text-transform:uppercase;font-size:11px;color:#d6b067;">${escape(business.name)}</div>
               <div style="margin-top:6px;font-size:22px;font-weight:600;">${escape(title)}</div>
             </td>
           </tr>
@@ -33,8 +33,8 @@ function layout(title: string, bodyHtml: string) {
             ${bodyHtml}
           </td></tr>
           <tr><td style="padding:20px 28px;border-top:1px solid #efe9dc;font-size:12px;color:#777;">
-            ${escape(BUSINESS.legalName)}<br/>
-            ${escape(BUSINESS.address.street)} — ${escape(BUSINESS.address.city)}/${escape(BUSINESS.address.state)}<br/>
+            ${escape(business.legalName)}<br/>
+            ${escape(business.address.street)} — ${escape(business.address.city)}/${escape(business.address.state)}<br/>
             <a href="${SITE}" style="color:#1d3a2c;">${escape(SITE.replace(/^https?:\/\//, ""))}</a>
           </td></tr>
         </table>
@@ -61,7 +61,10 @@ function fmtDate(iso: string) {
   return `${d}/${m}/${y}`;
 }
 
-export function renderEmail(payload: NotificationPayload): RenderedEmail {
+export function renderEmail(
+  payload: NotificationPayload,
+  business: BusinessSettingsData,
+): RenderedEmail {
   const d = payload.data as Record<string, string | number | undefined>;
   const t: NotificationTemplate = payload.template;
 
@@ -79,7 +82,7 @@ export function renderEmail(payload: NotificationPayload): RenderedEmail {
       `;
       return {
         subject: `[Lead] ${d.name ?? "novo contato"}`,
-        html: layout(title, body),
+        html: layout(title, body, business),
         text: `Novo lead: ${d.name} — ${d.email} / ${d.phone}. Painel: ${SITE}/admin/leads`,
       };
     }
@@ -94,7 +97,7 @@ export function renderEmail(payload: NotificationPayload): RenderedEmail {
       `;
       return {
         subject: `[Reserva pendente] ${d.bookingCode}`,
-        html: layout(title, body),
+        html: layout(title, body, business),
         text: `Reserva pendente ${d.bookingCode} — ${d.customerName}`,
       };
     }
@@ -110,7 +113,7 @@ export function renderEmail(payload: NotificationPayload): RenderedEmail {
       `;
       return {
         subject: `[Confirmada] ${d.bookingCode} — ${d.customerName}`,
-        html: layout(title, body),
+        html: layout(title, body, business),
         text: `Reserva ${d.bookingCode} confirmada.`,
       };
     }
@@ -125,7 +128,7 @@ export function renderEmail(payload: NotificationPayload): RenderedEmail {
       `;
       return {
         subject: "Finalize sua reserva — Espaço Cruzeiro",
-        html: layout(title, body),
+        html: layout(title, body, business),
         text: `Finalize sua reserva ${d.bookingCode}: ${d.checkoutUrl ?? ""}`,
       };
     }
@@ -142,7 +145,7 @@ export function renderEmail(payload: NotificationPayload): RenderedEmail {
       `;
       return {
         subject: `Sua reserva ${d.bookingCode} está confirmada`,
-        html: layout(title, body),
+        html: layout(title, body, business),
         text: `Sua reserva ${d.bookingCode} está confirmada para ${d.eventDate}.`,
       };
     }
@@ -157,7 +160,7 @@ export function renderEmail(payload: NotificationPayload): RenderedEmail {
       `;
       return {
         subject: `Reserva ${d.bookingCode} cancelada`,
-        html: layout(title, body),
+        html: layout(title, body, business),
         text: `Reserva ${d.bookingCode} cancelada.`,
       };
     }
@@ -172,7 +175,7 @@ export function renderEmail(payload: NotificationPayload): RenderedEmail {
       `;
       return {
         subject: "Faltam 7 dias para seu evento",
-        html: layout(title, body),
+        html: layout(title, body, business),
         text: `Faltam 7 dias para seu evento ${d.bookingCode}.`,
       };
     }
@@ -182,13 +185,13 @@ export function renderEmail(payload: NotificationPayload): RenderedEmail {
       const body = `
         <p>Olá, ${escape(String(d.customerName ?? ""))}!</p>
         <p>Seu evento <strong>${escape(String(d.bookingCode ?? ""))}</strong> é <strong>amanhã</strong> às ${escape(String(d.eventStartTime ?? ""))}.</p>
-        <p>Endereço: ${escape(BUSINESS.address.street)} — ${escape(BUSINESS.address.neighborhood)}, ${escape(BUSINESS.address.city)}/${escape(BUSINESS.address.state)}.</p>
+        <p>Endereço: ${escape(business.address.street)} — ${escape(business.address.neighborhood)}, ${escape(business.address.city)}/${escape(business.address.state)}.</p>
         <p>Estacionamento próprio no local. Nossa equipe estará a postos ${d.eventStartTime ? `uma hora antes (a partir das ${escape(String(d.eventStartTime).slice(0, 2))}h)` : "antes do horário"}.</p>
         <p>Nos vemos lá — e que seja lindo! 🎉</p>
       `;
       return {
         subject: `Seu evento é amanhã — ${d.bookingCode}`,
-        html: layout(title, body),
+        html: layout(title, body, business),
         text: `Seu evento ${d.bookingCode} é amanhã às ${d.eventStartTime}.`,
       };
     }

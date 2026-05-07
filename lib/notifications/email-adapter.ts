@@ -3,6 +3,7 @@ import "server-only";
 import { Resend } from "resend";
 
 import { serverEnv } from "@/lib/env";
+import { getBusinessSettings } from "@/lib/business-settings";
 import { renderEmail } from "./templates";
 import type {
   NotificationAdapter,
@@ -31,7 +32,8 @@ export const emailAdapter: NotificationAdapter = {
     }
 
     try {
-      const { subject, html, text } = renderEmail(payload);
+      const business = await getBusinessSettings();
+      const { subject, html, text } = renderEmail(payload, business);
 
       const resend = getResend();
       const { data, error } = await resend.emails.send({
