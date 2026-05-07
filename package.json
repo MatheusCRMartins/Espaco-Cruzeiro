@@ -12,6 +12,9 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
+    "db:setup": "tsx scripts/setup-supabase.ts",
+    "db:create-admin": "tsx scripts/create-admin.ts",
+    "db:verify": "tsx scripts/verify-setup.ts",
     "email:preview": "email dev -p 3001 -d ./emails"
   },
   "dependencies": {
