@@ -85,7 +85,13 @@ export default async function GalleryAdminPage() {
           Faça o upload no bucket <code className="rounded bg-muted px-1 py-0.5">gallery/</code>{" "}
           do Supabase Storage e cole o path aqui.
         </p>
-        <form action={addGalleryPhoto} className="mt-4 grid gap-3 sm:grid-cols-2">
+        <form
+          action={async (fd) => {
+            "use server";
+            await addGalleryPhoto(fd);
+          }}
+          className="mt-4 grid gap-3 sm:grid-cols-2"
+        >
           <label className="col-span-full flex flex-col gap-1 text-xs">
             <span className="font-medium">Path no bucket</span>
             <input

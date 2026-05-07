@@ -85,7 +85,13 @@ export default async function EventTypesAdminPage() {
 
       <section className="rounded-lg border border-border bg-card p-5">
         <h2 className="font-semibold">Adicionar novo tipo</h2>
-        <form action={saveEventType} className="mt-4 grid gap-3 sm:grid-cols-2">
+        <form
+          action={async (fd) => {
+            "use server";
+            await saveEventType(fd);
+          }}
+          className="mt-4 grid gap-3 sm:grid-cols-2"
+        >
           <Field name="slug" label="Slug" placeholder="casamentos" />
           <Field name="name" label="Nome" placeholder="Casamentos" />
           <Field name="description" label="Descrição curta" placeholder="Cerimônias e festas." />

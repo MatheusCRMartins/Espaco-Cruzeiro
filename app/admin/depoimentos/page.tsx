@@ -78,7 +78,13 @@ export default async function TestimonialsAdminPage() {
 
       <section className="rounded-lg border border-border bg-card p-5">
         <h2 className="font-semibold">Adicionar depoimento</h2>
-        <form action={addTestimonial} className="mt-4 grid gap-3 sm:grid-cols-2">
+        <form
+          action={async (fd) => {
+            "use server";
+            await addTestimonial(fd);
+          }}
+          className="mt-4 grid gap-3 sm:grid-cols-2"
+        >
           <label className="flex flex-col gap-1 text-xs">
             <span className="font-medium">Nome do cliente</span>
             <input

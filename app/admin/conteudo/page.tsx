@@ -58,7 +58,13 @@ export default async function ContentAdminPage() {
                 atualizado em {b.updatedAt.toLocaleString("pt-BR")}
               </span>
             </summary>
-            <form action={saveContentBlock} className="mt-4 space-y-2">
+            <form
+              action={async (fd) => {
+                "use server";
+                await saveContentBlock(fd);
+              }}
+              className="mt-4 space-y-2"
+            >
               <input type="hidden" name="key" value={b.key} />
               <textarea
                 name="value"
@@ -77,7 +83,13 @@ export default async function ContentAdminPage() {
 
       <section className="rounded-lg border border-border bg-card p-5">
         <h2 className="font-semibold">Novo bloco</h2>
-        <form action={saveContentBlock} className="mt-4 space-y-3">
+        <form
+          action={async (fd) => {
+            "use server";
+            await saveContentBlock(fd);
+          }}
+          className="mt-4 space-y-3"
+        >
           <label className="flex flex-col gap-1 text-xs">
             <span className="font-medium">Chave</span>
             <input

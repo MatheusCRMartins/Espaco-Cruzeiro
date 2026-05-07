@@ -93,7 +93,13 @@ export default async function AvailabilityAdminPage() {
           ))}
         </ul>
 
-        <form action={addRule} className="grid gap-3 border-t border-border pt-4 sm:grid-cols-4">
+        <form
+          action={async (fd) => {
+            "use server";
+            await addRule(fd);
+          }}
+          className="grid gap-3 border-t border-border pt-4 sm:grid-cols-4"
+        >
           <label className="flex flex-col gap-1 text-xs">
             <span className="font-medium">Dia</span>
             <select
@@ -161,7 +167,13 @@ export default async function AvailabilityAdminPage() {
           ))}
         </ul>
 
-        <form action={addBlockedDate} className="grid gap-3 border-t border-border pt-4 sm:grid-cols-[160px_1fr_auto]">
+        <form
+          action={async (fd) => {
+            "use server";
+            await addBlockedDate(fd);
+          }}
+          className="grid gap-3 border-t border-border pt-4 sm:grid-cols-[160px_1fr_auto]"
+        >
           <label className="flex flex-col gap-1 text-xs">
             <span className="font-medium">Data</span>
             <input
