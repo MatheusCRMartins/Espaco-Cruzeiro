@@ -87,18 +87,27 @@ export default async function BookingsListPage({
           </p>
         </div>
 
-        <form className="flex gap-2" action="/admin/reservas">
-          <input type="hidden" name="status" value={status} />
-          <input
-            name="q"
-            defaultValue={q}
-            placeholder="Buscar por nome, e-mail, código…"
-            className="h-9 w-72 rounded-md border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          />
-          <button className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-            Buscar
-          </button>
-        </form>
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href="/api/admin/export?type=bookings"
+            className="h-9 inline-flex items-center rounded-md border border-border bg-background px-3 text-sm hover:bg-muted"
+            title="Baixar CSV com todas as reservas"
+          >
+            ⬇ Exportar CSV
+          </a>
+          <form className="flex gap-2" action="/admin/reservas">
+            <input type="hidden" name="status" value={status} />
+            <input
+              name="q"
+              defaultValue={q}
+              placeholder="Buscar por nome, e-mail, código…"
+              className="h-9 w-72 rounded-md border border-border bg-background px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            <button className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+              Buscar
+            </button>
+          </form>
+        </div>
       </div>
 
       <nav className="flex flex-wrap gap-2 text-xs">

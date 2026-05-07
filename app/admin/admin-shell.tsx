@@ -20,6 +20,8 @@ const NAV = [
   { href: "/admin/galeria", label: "Galeria" },
   { href: "/admin/depoimentos", label: "Depoimentos" },
   { href: "/admin/conteudo", label: "Conteúdo" },
+  { href: "/admin/comunicacoes", label: "Comunicações" },
+  { href: "/admin/auditoria", label: "Auditoria" },
   { href: "/admin/configuracoes", label: "Configurações" },
 ];
 

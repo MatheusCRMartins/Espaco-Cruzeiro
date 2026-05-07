@@ -45,11 +45,20 @@ export default async function LeadsListPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Leads</h1>
-        <p className="text-sm text-muted-foreground">
-          {rows.length} {rows.length === 1 ? "lead" : "leads"}.
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Leads</h1>
+          <p className="text-sm text-muted-foreground">
+            {rows.length} {rows.length === 1 ? "lead" : "leads"}.
+          </p>
+        </div>
+        <a
+          href="/api/admin/export?type=leads"
+          className="h-9 inline-flex items-center rounded-md border border-border bg-background px-3 text-sm hover:bg-muted"
+          title="Baixar CSV com todos os leads"
+        >
+          ⬇ Exportar CSV
+        </a>
       </div>
 
       <div className="overflow-hidden rounded-lg border border-border">
