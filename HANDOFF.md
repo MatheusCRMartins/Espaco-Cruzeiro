@@ -11,7 +11,7 @@
 
 ## 1. TL;DR (em 5 linhas)
 
-Sou Matheus, dono do projeto. Comprei um Claude pra desenvolver um **site + sistema de reservas online** pra um buffet em Osasco/SP chamado **Espaço Cruzeiro** (cliente Belari). Stack: **Next.js 16 + Supabase + Drizzle + Mercado Pago + Resend**. O projeto está **funcional, com painel admin completo** (12 áreas), **segurança reforçada** após pente fino sênior, e **rodando localmente em `localhost:3000`**. **37+ commits no GitHub**: https://github.com/MatheusCRMartins/Espaco-Cruzeiro. Próximas decisões são: configurar Mercado Pago real, Resend, deploy Vercel, e — possivelmente — refatorar pra **multi-tenant SaaS** vendendo pra outros buffets.
+Sou Matheus, dono do projeto. Estou desenvolvendo um **site + sistema de reservas online** pra um buffet em Osasco/SP chamado **Espaço Cruzeiro** (prospect — proposta ainda em negociação, valor não fechado). Stack: **Next.js 16 + Supabase + Drizzle + Mercado Pago + Resend**. O projeto está **funcional, com painel admin completo** (12 áreas), **segurança reforçada** após pente fino sênior, e **rodando localmente em `localhost:3000`**. **37+ commits no GitHub**: https://github.com/MatheusCRMartins/Espaco-Cruzeiro. Próximas decisões são: configurar Mercado Pago real, Resend, deploy Vercel, e — possivelmente — refatorar pra **multi-tenant SaaS** vendendo pra outros buffets.
 
 ---
 
@@ -20,7 +20,7 @@ Sou Matheus, dono do projeto. Comprei um Claude pra desenvolver um **site + sist
 - **Nome**: Matheus Martins
 - **Email**: `mrmtec14@gmail.com`
 - **GitHub**: [MatheusCRMartins](https://github.com/MatheusCRMartins)
-- **Empresa proprietária**: Belari (cliente final é o Espaço Cruzeiro buffet)
+- **Empresa proprietária**: nenhuma — projeto pessoal/freelance. Cliente final é o **Espaço Cruzeiro** (buffet em Osasco/SP).
 - **Sou júnior em Next.js/Supabase**, mas estou aprendendo. Prefiro:
   - Explicações **didáticas** quando o tópico é novo (Supabase, MP, deploy, etc.)
   - Código **direto e profissional** quando é só pra avançar
@@ -32,9 +32,10 @@ Sou Matheus, dono do projeto. Comprei um Claude pra desenvolver um **site + sist
 
 ## 3. Estado comercial e estratégico
 
-- **Proposta de R$ 18.000** já fechada com Belari (1 cliente único). 3 parcelas (40/30/30%).
+- **Proposta comercial AINDA EM ABERTO** com o Espaço Cruzeiro — valor não fechado, negociação em andamento.
+  - PDF gerado de exemplo (R$ 18.000 em 3 parcelas 40/30/30%) é só **referência interna**, não um contrato vigente.
   - Briefing: `briefing/BRIEFING_ESPACO_CRUZEIRO.docx`
-  - Proposta: `pdfs/02_proposta_comercial.pdf`
+  - Proposta-modelo: `pdfs/02_proposta_comercial.pdf`
   - Doc técnica: `pdfs/03_documentacao_tecnica.pdf`
   - Guia passo-a-passo: `pdfs/01_guia_passo_a_passo.pdf`
 - **Possibilidade aberta**: virar **produto SaaS pra outros buffets** (~5-10k buffets ativos no BR; mercado fragmentado; ~10 concorrentes existentes mas todos focam em ERP backend e ignoram a frente "site bonito + admin"). Análise completa de mercado foi feita no chat anterior — se for retomar essa frente, pedir resumo do "Modelo B — white-label site bonito + admin".
@@ -69,7 +70,7 @@ Sou Matheus, dono do projeto. Comprei um Claude pra desenvolver um **site + sist
 
 ### Sistema
 - **Pasta primária**: `C:\Users\Matheus Martins\Desktop\espaco-cruzeiro`
-- **Pasta secundária** (scripts python de clima Belari, **NÃO MEXER**): `C:\Users\Matheus Martins\Desktop\climas`
+- **Pasta secundária** (scripts Python de coleta de clima — projeto separado, **NÃO MEXER**): `C:\Users\Matheus Martins\Desktop\climas`
 - **Shell**: bash (use sintaxe Unix). PowerShell também disponível.
 - **OS**: Windows 11
 
