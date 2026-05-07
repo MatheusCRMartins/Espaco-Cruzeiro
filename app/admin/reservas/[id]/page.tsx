@@ -123,6 +123,7 @@ export default async function BookingDetailPage({
         <div className="space-y-4">
           <BookingActionsPanel
             bookingId={booking.id}
+            bookingCode={booking.bookingCode}
             currentNotes={booking.adminNotes}
             status={booking.status}
           />

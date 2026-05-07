@@ -1,6 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
+
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 import { deleteTestimonial, toggleTestimonial } from "./actions";
 
@@ -12,6 +14,8 @@ export function TestimonialRowActions({
   approved: boolean;
 }) {
   const [pending, start] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   return (
     <div className="flex items-center gap-3 text-xs">
       <button
@@ -29,16 +33,23 @@ export function TestimonialRowActions({
       <button
         type="button"
         disabled={pending}
-        onClick={() =>
-          start(async () => {
-            if (!window.confirm("Remover depoimento?")) return;
-            await deleteTestimonial(id);
-          })
-        }
+        onClick={() => setConfirmOpen(true)}
         className="text-red-600 hover:underline"
       >
         Excluir
       </button>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        title="Excluir depoimento?"
+        description="O depoimento sai do site. Não dá pra desfazer."
+        confirmLabel="Excluir"
+        destructive
+        onConfirm={async () => {
+          await deleteTestimonial(id);
+        }}
+      />
     </div>
   );
 }

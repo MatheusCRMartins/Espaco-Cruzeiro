@@ -21,6 +21,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Trash2, Pencil, Eye, EyeOff } from "lucide-react";
 
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn, formatBRL } from "@/lib/utils";
 
 import { deleteEventType, reorderEventTypes, toggleEventType } from "./actions";
@@ -132,6 +133,10 @@ export function EventTypesList({ items }: { items: EventTypeListItem[] }) {
   const [list, setList] = useState(items);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -174,21 +179,19 @@ export function EventTypesList({ items }: { items: EventTypeListItem[] }) {
   }
 
   function handleDelete(id: string, name: string) {
-    if (
-      !window.confirm(
-        `Excluir o tipo "${name}"?\n\nIsso é irreversível. Se houver reservas vinculadas, vou bloquear a exclusão.`,
-      )
-    )
-      return;
-    start(async () => {
-      const result = await deleteEventType(id);
-      if (result.ok) {
-        setList((cur) => cur.filter((it) => it.id !== id));
-        setError(null);
-      } else {
-        setError(result.error ?? "Não consegui excluir.");
-      }
-    });
+    setPendingDelete({ id, name });
+  }
+
+  async function confirmDelete() {
+    if (!pendingDelete) return;
+    const { id } = pendingDelete;
+    const result = await deleteEventType(id);
+    if (result.ok) {
+      setList((cur) => cur.filter((it) => it.id !== id));
+      setError(null);
+    } else {
+      setError(result.error ?? "Não consegui excluir.");
+    }
   }
 
   if (list.length === 0) {
@@ -233,6 +236,22 @@ export function EventTypesList({ items }: { items: EventTypeListItem[] }) {
       <p className="text-xs text-muted-foreground">
         Arraste pelo ícone à esquerda pra reordenar. Mudanças salvam automaticamente.
       </p>
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        onClose={() => setPendingDelete(null)}
+        title={`Excluir "${pendingDelete?.name ?? ""}"?`}
+        description={
+          <>
+            Isso é irreversível. Se houver reservas usando esse tipo, a
+            exclusão é bloqueada — desative em vez de excluir.
+          </>
+        }
+        confirmPhrase="EXCLUIR"
+        confirmLabel="Excluir tipo"
+        destructive
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

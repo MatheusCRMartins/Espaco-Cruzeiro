@@ -2,6 +2,9 @@
 
 import { useState, useTransition } from "react";
 
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Textarea } from "@/components/ui/input";
+
 import {
   cancelBookingAdmin,
   forceConfirmBooking,
@@ -11,18 +14,27 @@ import {
 
 export function BookingActionsPanel({
   bookingId,
+  bookingCode,
   currentNotes,
   status,
 }: {
   bookingId: string;
+  bookingCode: string;
   currentNotes: string | null;
   status: string;
 }) {
   const [notes, setNotes] = useState(currentNotes ?? "");
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [completeOpen, setCompleteOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
 
-  const doAction = (action: () => Promise<{ ok: boolean; error?: string }>, success: string) => {
+  const doAction = (
+    action: () => Promise<{ ok: boolean; error?: string }>,
+    success: string,
+  ) => {
     start(async () => {
       setMsg(null);
       const r = await action();
@@ -38,9 +50,7 @@ export function BookingActionsPanel({
         {status !== "confirmed" && (
           <button
             type="button"
-            onClick={() =>
-              doAction(() => forceConfirmBooking(bookingId), "Reserva confirmada.")
-            }
+            onClick={() => setConfirmOpen(true)}
             disabled={pending}
             className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
           >
@@ -50,9 +60,7 @@ export function BookingActionsPanel({
         {status === "confirmed" && (
           <button
             type="button"
-            onClick={() =>
-              doAction(() => markBookingCompleted(bookingId), "Marcada como realizada.")
-            }
+            onClick={() => setCompleteOpen(true)}
             disabled={pending}
             className="rounded-md bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-700 disabled:opacity-50"
           >
@@ -63,12 +71,8 @@ export function BookingActionsPanel({
           <button
             type="button"
             onClick={() => {
-              const reason = window.prompt("Motivo do cancelamento?") ?? "";
-              if (!reason) return;
-              doAction(
-                () => cancelBookingAdmin(bookingId, reason),
-                "Reserva cancelada.",
-              );
+              setCancelReason("");
+              setCancelOpen(true);
             }}
             disabled={pending}
             className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
@@ -100,6 +104,62 @@ export function BookingActionsPanel({
       </div>
 
       {msg && <p className="text-xs text-muted-foreground">{msg}</p>}
+
+      {/* Confirmar manualmente — só pede confirm padrão (não é destrutivo) */}
+      <ConfirmDialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        title={`Confirmar reserva ${bookingCode}?`}
+        description="Marca o pagamento como aprovado manualmente. Use só quando o cliente já pagou por outro meio (transferência, dinheiro, etc.)."
+        confirmLabel="Confirmar reserva"
+        onConfirm={async () => {
+          const r = await forceConfirmBooking(bookingId);
+          setMsg(r.ok ? "Reserva confirmada." : `Erro: ${r.error ?? "desconhecido"}`);
+        }}
+      />
+
+      <ConfirmDialog
+        open={completeOpen}
+        onClose={() => setCompleteOpen(false)}
+        title="Marcar como realizada?"
+        description="Use depois que o evento aconteceu. Reservas realizadas saem do calendário ativo."
+        confirmLabel="Marcar realizada"
+        onConfirm={async () => {
+          const r = await markBookingCompleted(bookingId);
+          setMsg(r.ok ? "Marcada como realizada." : `Erro: ${r.error ?? "desconhecido"}`);
+        }}
+      />
+
+      <ConfirmDialog
+        open={cancelOpen}
+        onClose={() => setCancelOpen(false)}
+        title={`Cancelar reserva ${bookingCode}?`}
+        description={
+          <div className="space-y-2">
+            <p>
+              Isso libera a data e marca a reserva como cancelada. Se o cliente já
+              pagou, lembre de processar o reembolso pelo Mercado Pago manualmente.
+            </p>
+            <Textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              rows={3}
+              placeholder="Motivo do cancelamento (vai pro audit log)"
+              className="text-foreground"
+            />
+          </div>
+        }
+        confirmPhrase="CANCELAR"
+        confirmLabel="Cancelar reserva"
+        destructive
+        onConfirm={async () => {
+          const r = await cancelBookingAdmin(
+            bookingId,
+            cancelReason.trim() || "(sem motivo informado)",
+          );
+          setMsg(r.ok ? "Reserva cancelada." : `Erro: ${r.error ?? "desconhecido"}`);
+        }}
+      />
     </div>
   );
 }
