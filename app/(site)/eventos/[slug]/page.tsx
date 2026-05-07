@@ -8,7 +8,7 @@ import { Container, Eyebrow, Section } from "@/components/ui/container";
 import { Testimonials } from "@/components/site/sections/testimonials";
 import { Faq } from "@/components/site/sections/faq";
 import { EVENT_TYPES, getEventType } from "@/lib/mock/event-types";
-import { BUSINESS } from "@/lib/constants";
+import { getBusinessSettings } from "@/lib/business-settings";
 import { cn, formatBRL, waLink } from "@/lib/utils";
 
 type Params = { slug: string };
@@ -45,9 +45,9 @@ export default async function EventTypePage({
   const evt = getEventType(slug);
   if (!evt) notFound();
 
-  const waNumber =
-    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? BUSINESS.contact.whatsappNumber;
-  const waMessage = `Olá! Gostaria de saber mais sobre ${evt.name.toLowerCase()} no Espaço Cruzeiro.`;
+  const settings = await getBusinessSettings();
+  const waNumber = settings.contact.whatsappNumber;
+  const waMessage = `Olá! Gostaria de saber mais sobre ${evt.name.toLowerCase()} no ${settings.name}.`;
 
   const others = EVENT_TYPES.filter((e) => e.slug !== evt.slug).slice(0, 3);
 

@@ -3,12 +3,12 @@ import { Sparkles } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { Container, Eyebrow } from "@/components/ui/container";
-import { BUSINESS } from "@/lib/constants";
+import { getBusinessSettings } from "@/lib/business-settings";
 import { cn, waLink } from "@/lib/utils";
 
-export function Hero() {
-  const waNumber =
-    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? BUSINESS.contact.whatsappNumber;
+export async function Hero() {
+  const settings = await getBusinessSettings();
+  const waNumber = settings.contact.whatsappNumber;
 
   return (
     <section className="relative isolate overflow-hidden border-b border-border">
@@ -23,7 +23,7 @@ export function Hero() {
       />
       <Container className="relative py-20 sm:py-28 lg:py-32">
         <div className="mx-auto max-w-3xl text-center">
-          <Eyebrow>Buffet em Osasco · Av. Cruzeiro do Sul</Eyebrow>
+          <Eyebrow>Buffet em {settings.address.city} · {settings.address.street.split(",")[0]}</Eyebrow>
           <h1 className="mt-6 text-5xl font-semibold tracking-tight sm:text-6xl lg:text-7xl">
             O lugar certo para os momentos que você não esquece.
           </h1>
@@ -43,7 +43,7 @@ export function Hero() {
             <a
               href={waLink(
                 waNumber,
-                "Olá! Vi o site e gostaria de tirar uma dúvida sobre o Espaço Cruzeiro.",
+                `Olá! Vi o site e gostaria de tirar uma dúvida sobre o ${settings.name}.`,
               )}
               target="_blank"
               rel="noopener noreferrer"

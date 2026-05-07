@@ -9,13 +9,12 @@ import { Container, Eyebrow, Section } from "@/components/ui/container";
 import { Input, Label } from "@/components/ui/input";
 import { EVENT_TYPES } from "@/lib/mock/event-types";
 import { cn, formatBRL, waLink } from "@/lib/utils";
-import { BUSINESS } from "@/lib/constants";
 
 /**
  * Budget calculator — returns an estimated range based on mock prices.
  * Copy makes it explicit this is an estimate, not a final quote.
  */
-export function BudgetCalculator() {
+export function BudgetCalculator({ whatsappNumber }: { whatsappNumber: string }) {
   const [slug, setSlug] = useState(EVENT_TYPES[0].slug);
   const [guests, setGuests] = useState<number>(80);
   const type = useMemo(
@@ -23,8 +22,7 @@ export function BudgetCalculator() {
     [slug],
   );
 
-  const waNumber =
-    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? BUSINESS.contact.whatsappNumber;
+  const waNumber = whatsappNumber;
 
   const clampedGuests = Math.max(type.minGuests, Math.min(type.maxGuests, guests || 0));
   const low = clampedGuests * type.basePricePerPerson * 0.9;

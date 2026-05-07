@@ -1,6 +1,7 @@
 import { Camera } from "lucide-react";
 
 import { Container, Eyebrow, Section } from "@/components/ui/container";
+import { getBusinessSettings } from "@/lib/business-settings";
 
 /**
  * Gallery placeholder — shows 4 photo slots with consistent aspect ratios
@@ -14,7 +15,8 @@ const GALLERY_SLOTS = [
   { tone: "from-primary/80 to-accent/40", label: "Ambiente corporativo", ratio: "aspect-[4/3]" },
 ];
 
-export function TheSpace() {
+export async function TheSpace() {
+  const settings = await getBusinessSettings();
   return (
     <Section id="o-espaco">
       <Container>
@@ -31,7 +33,7 @@ export function TheSpace() {
               estacionamento próprio.
             </p>
             <ul className="mt-6 space-y-2 text-sm text-muted-foreground">
-              <li>• Capacidade para até {150} convidados</li>
+              <li>• Capacidade para até {settings.stats.maxCapacity} convidados</li>
               <li>• Buffet completo com cozinha própria</li>
               <li>• Ar condicionado em todo o salão</li>
               <li>• Estacionamento gratuito para convidados</li>

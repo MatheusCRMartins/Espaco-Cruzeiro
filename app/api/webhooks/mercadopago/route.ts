@@ -13,7 +13,7 @@ import {
   markPaymentFailed,
 } from "@/lib/bookings/service";
 import { notify } from "@/lib/notifications";
-import { BUSINESS } from "@/lib/constants";
+import { getBusinessSettings } from "@/lib/business-settings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -105,9 +105,10 @@ export async function POST(request: Request) {
     if (paymentStatus === "approved") {
       await confirmBooking(bookingId, paymentIdStr, paymentStatus);
 
+      const settings = await getBusinessSettings();
       // Notifica admin + cliente (best-effort)
       void notify("email", {
-        recipient: BUSINESS.contact.email,
+        recipient: settings.contact.email,
         template: "admin_booking_confirmed",
         data: {
           bookingCode: booking.bookingCode,

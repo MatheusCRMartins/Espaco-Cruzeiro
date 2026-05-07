@@ -1,13 +1,15 @@
 import { ImageResponse } from "next/og";
 
-import { BUSINESS } from "@/lib/constants";
+import { getBusinessSettings } from "@/lib/business-settings";
 
 export const runtime = "nodejs";
-export const alt = `${BUSINESS.name} — buffet e eventos em Osasco`;
+export const alt = "Buffet e eventos";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export default function OGImage() {
+export default async function OGImage() {
+  const settings = await getBusinessSettings();
+  const BUSINESS = settings;
   return new ImageResponse(
     (
       <div

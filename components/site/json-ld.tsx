@@ -1,44 +1,57 @@
-import { BUSINESS } from "@/lib/constants";
+import { getBusinessSettings } from "@/lib/business-settings";
 
 /**
  * Schema.org LocalBusiness + EventVenue JSON-LD for SEO.
  * Rendered on every public page via the (site) layout.
  */
-export function BusinessJsonLd() {
+export async function BusinessJsonLd() {
+  const settings = await getBusinessSettings();
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL ?? "https://espacocruzeiro.com.br";
-  const waNumber =
-    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? BUSINESS.contact.whatsappNumber;
+
+  const sameAs = [
+    settings.contact.instagram,
+    settings.contact.facebook,
+    settings.contact.tiktok,
+    settings.contact.youtube,
+  ].filter((u): u is string => !!u && u.length > 0);
 
   const json = {
     "@context": "https://schema.org",
     "@type": ["LocalBusiness", "EventVenue"],
     "@id": `${siteUrl}#business`,
-    name: BUSINESS.name,
-    legalName: BUSINESS.legalName,
+    name: settings.name,
+    legalName: settings.legalName,
     url: siteUrl,
-    telephone: `+${waNumber}`,
-    email: BUSINESS.contact.email,
+    telephone: `+${settings.contact.whatsappNumber}`,
+    email: settings.contact.email,
     image: `${siteUrl}/opengraph-image`,
     priceRange: "$$",
     address: {
       "@type": "PostalAddress",
-      streetAddress: BUSINESS.address.street,
-      addressLocality: BUSINESS.address.city,
-      addressRegion: BUSINESS.address.state,
-      postalCode: BUSINESS.address.zip,
-      addressCountry: BUSINESS.address.country,
+      streetAddress: settings.address.street,
+      addressLocality: settings.address.city,
+      addressRegion: settings.address.state,
+      postalCode: settings.address.zip,
+      addressCountry: settings.address.country,
     },
     geo: {
       "@type": "GeoCoordinates",
-      latitude: BUSINESS.address.lat,
-      longitude: BUSINESS.address.lng,
+      latitude: settings.address.lat,
+      longitude: settings.address.lng,
     },
-    sameAs: [BUSINESS.contact.instagram],
-    maximumAttendeeCapacity: BUSINESS.stats.maxCapacity,
+    sameAs,
+    maximumAttendeeCapacity: settings.stats.maxCapacity,
+    aggregateRating: settings.stats.rating
+      ? {
+          "@type": "AggregateRating",
+          ratingValue: settings.stats.rating,
+          reviewCount: Math.max(1, settings.stats.eventsCompleted),
+        }
+      : undefined,
     areaServed: {
       "@type": "City",
-      name: "Osasco e região",
+      name: `${settings.address.city} e região`,
     },
     amenityFeature: [
       { "@type": "LocationFeatureSpecification", name: "Estacionamento" },
@@ -51,7 +64,7 @@ export function BusinessJsonLd() {
   return (
     <script
       type="application/ld+json"
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD is escaped via JSON.stringify
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD escaped via JSON.stringify
       dangerouslySetInnerHTML={{ __html: JSON.stringify(json) }}
     />
   );

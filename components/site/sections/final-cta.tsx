@@ -2,12 +2,12 @@ import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
 import { Container, Section } from "@/components/ui/container";
-import { BUSINESS } from "@/lib/constants";
+import { getBusinessSettings } from "@/lib/business-settings";
 import { cn, waLink } from "@/lib/utils";
 
-export function FinalCta() {
-  const waNumber =
-    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? BUSINESS.contact.whatsappNumber;
+export async function FinalCta() {
+  const settings = await getBusinessSettings();
+  const waNumber = settings.contact.whatsappNumber;
 
   return (
     <Section className="relative overflow-hidden py-20 sm:py-28">
@@ -34,7 +34,7 @@ export function FinalCta() {
             <a
               href={waLink(
                 waNumber,
-                "Olá! Gostaria de saber mais antes de reservar no Espaço Cruzeiro.",
+                `Olá! Gostaria de saber mais antes de reservar no ${settings.name}.`,
               )}
               target="_blank"
               rel="noopener noreferrer"

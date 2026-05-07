@@ -5,7 +5,6 @@ import { useState } from "react";
 import { Menu, X } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
-import { BUSINESS } from "@/lib/constants";
 import { cn, waLink } from "@/lib/utils";
 
 const NAV = [
@@ -17,10 +16,15 @@ const NAV = [
   { href: "/contato", label: "Contato" },
 ];
 
-export function SiteHeader() {
+export function SiteHeader({
+  businessName,
+  whatsappNumber,
+}: {
+  businessName: string;
+  whatsappNumber: string;
+}) {
   const [open, setOpen] = useState(false);
-  const waNumber =
-    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? BUSINESS.contact.whatsappNumber;
+  const waNumber = whatsappNumber;
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
@@ -28,7 +32,7 @@ export function SiteHeader() {
         <Link href="/" className="flex items-center gap-2" aria-label="Espaço Cruzeiro — Home">
           <LogoMark />
           <span className="font-display text-lg font-semibold tracking-tight">
-            Espaço Cruzeiro
+            {businessName}
           </span>
         </Link>
 

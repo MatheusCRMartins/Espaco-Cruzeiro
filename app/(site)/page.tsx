@@ -7,8 +7,11 @@ import { BudgetCalculator } from "@/components/site/sections/budget-calculator";
 import { Testimonials } from "@/components/site/sections/testimonials";
 import { Faq } from "@/components/site/sections/faq";
 import { FinalCta } from "@/components/site/sections/final-cta";
+import { getBusinessSettings } from "@/lib/business-settings";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const settings = await getBusinessSettings();
+
   return (
     <>
       <Hero />
@@ -16,7 +19,7 @@ export default function HomePage() {
       <TheSpace />
       <EventTypesGrid />
       <HowItWorks />
-      <BudgetCalculator />
+      <BudgetCalculator whatsappNumber={settings.contact.whatsappNumber} />
       <Testimonials />
       <Faq />
       <FinalCta />

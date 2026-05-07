@@ -4,7 +4,7 @@ import "server-only";
 
 import { getDb, schema } from "@/lib/db";
 import { notify } from "@/lib/notifications";
-import { BUSINESS } from "@/lib/constants";
+import { getBusinessSettings } from "@/lib/business-settings";
 import { leadInputSchema } from "@/lib/validations/lead";
 
 export type ContactActionState = {
@@ -64,9 +64,10 @@ export async function submitContact(
       })
       .returning({ id: schema.leads.id });
 
+    const settings = await getBusinessSettings();
     // best-effort notification — não derruba o fluxo se falhar
     void notify("email", {
-      recipient: BUSINESS.contact.email,
+      recipient: settings.contact.email,
       template: "admin_new_lead",
       data: {
         name: data.name,

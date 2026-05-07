@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { LegalPage } from "@/components/site/legal-page";
-import { BUSINESS } from "@/lib/constants";
+import { getBusinessSettings } from "@/lib/business-settings";
 
 export const metadata: Metadata = {
   title: "Termos de Uso",
@@ -9,7 +9,8 @@ export const metadata: Metadata = {
     "Termos e condições de uso do site do Espaço Cruzeiro e da contratação dos serviços de eventos.",
 };
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const settings = await getBusinessSettings();
   return (
     <LegalPage
       eyebrow="Termos"
@@ -19,7 +20,7 @@ export default function TermsPage() {
       <section className="space-y-3">
         <p>
           Ao utilizar este site e contratar os serviços do{" "}
-          <strong>{BUSINESS.legalName}</strong>, você concorda com os termos
+          <strong>{settings.legalName}</strong>, você concorda com os termos
           descritos a seguir. Leia com atenção antes de concluir uma reserva.
         </p>
       </section>
@@ -111,7 +112,7 @@ export default function TermsPage() {
         <h2>7. Propriedade intelectual</h2>
         <p>
           Todo o conteúdo deste site (textos, imagens, logotipos) pertence ao{" "}
-          {BUSINESS.legalName} ou é utilizado mediante licença. Proibida a
+          {settings.legalName} ou é utilizado mediante licença. Proibida a
           reprodução sem autorização.
         </p>
       </section>

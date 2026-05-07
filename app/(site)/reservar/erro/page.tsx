@@ -4,7 +4,7 @@ import { XCircle } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { Container, Section } from "@/components/ui/container";
-import { BUSINESS } from "@/lib/constants";
+import { getBusinessSettings } from "@/lib/business-settings";
 import { waLink } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -21,8 +21,8 @@ export default async function PaymentErrorPage({
 }) {
   const sp = await searchParams;
   const booking = sp.booking;
-  const waNumber =
-    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? BUSINESS.contact.whatsappNumber;
+  const settings = await getBusinessSettings();
+  const waNumber = settings.contact.whatsappNumber;
 
   return (
     <Section>

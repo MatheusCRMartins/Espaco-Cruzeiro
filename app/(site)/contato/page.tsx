@@ -2,23 +2,21 @@ import type { Metadata } from "next";
 import { Mail, MapPin, MessageCircle, Phone } from "lucide-react";
 
 import { Container, Eyebrow, Section } from "@/components/ui/container";
-import { BUSINESS } from "@/lib/constants";
+import { getBusinessSettings } from "@/lib/business-settings";
 import { waLink } from "@/lib/utils";
 
 import { ContactForm } from "./contact-form";
 
 export const metadata: Metadata = {
-  title: "Fale com o Espaço Cruzeiro",
+  title: "Fale com a gente",
   description:
-    "Tire suas dúvidas, peça um orçamento ou agende uma visita ao Espaço Cruzeiro — buffet em Osasco para casamentos, aniversários, chás e eventos corporativos.",
+    "Tire suas dúvidas, peça um orçamento ou agende uma visita — buffet para casamentos, aniversários, chás e eventos corporativos.",
 };
 
-const CONTACT_MESSAGE =
-  "Olá! Cheguei pela página de contato do Espaço Cruzeiro.";
-
-export default function ContatoPage() {
-  const waNumber =
-    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? BUSINESS.contact.whatsappNumber;
+export default async function ContatoPage() {
+  const settings = await getBusinessSettings();
+  const waNumber = settings.contact.whatsappNumber;
+  const CONTACT_MESSAGE = `Olá! Cheguei pela página de contato do ${settings.name}.`;
 
   return (
     <>
@@ -71,25 +69,25 @@ export default function ContatoPage() {
                   <MapPin className="mt-0.5 size-4 shrink-0 text-accent" />
                   <div>
                     <p className="text-foreground">
-                      {BUSINESS.address.street}
+                      {settings.address.street}
                     </p>
                     <p>
-                      {BUSINESS.address.neighborhood} ·{" "}
-                      {BUSINESS.address.city}/{BUSINESS.address.state}
+                      {settings.address.neighborhood} ·{" "}
+                      {settings.address.city}/{settings.address.state}
                     </p>
                   </div>
                 </div>
                 <div className="flex gap-3 text-sm text-muted-foreground">
                   <Phone className="mt-0.5 size-4 shrink-0 text-accent" />
-                  <p>{BUSINESS.contact.phone}</p>
+                  <p>{settings.contact.phone}</p>
                 </div>
                 <div className="flex gap-3 text-sm text-muted-foreground">
                   <Mail className="mt-0.5 size-4 shrink-0 text-accent" />
                   <a
-                    href={`mailto:${BUSINESS.contact.email}`}
+                    href={`mailto:${settings.contact.email}`}
                     className="hover:text-foreground"
                   >
-                    {BUSINESS.contact.email}
+                    {settings.contact.email}
                   </a>
                 </div>
               </div>
@@ -99,7 +97,7 @@ export default function ContatoPage() {
                   Horário de atendimento
                 </h2>
                 <ul className="mt-3 space-y-1.5 text-sm">
-                  {BUSINESS.hours.map((h) => (
+                  {settings.hours.map((h) => (
                     <li
                       key={h.label}
                       className="flex items-center justify-between gap-4"

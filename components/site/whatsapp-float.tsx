@@ -3,13 +3,15 @@
 import { usePathname } from "next/navigation";
 import { MessageCircle } from "lucide-react";
 
-import { BUSINESS } from "@/lib/constants";
 import { waLink } from "@/lib/utils";
 
 /**
  * Floating WhatsApp button, visible on every public page except the
  * reservation checkout flow (to avoid distracting users mid-payment).
  * Message pre-fill is contextual per page.
+ *
+ * Recebe whatsappNumber via prop pra ficar no servidor a fonte de verdade
+ * (business_settings) e nunca depender de hardcode no client.
  */
 const CONTEXTUAL_MESSAGES: Record<string, string> = {
   "/": "Olá! Vi o site do Espaço Cruzeiro e gostaria de tirar uma dúvida.",
@@ -29,20 +31,17 @@ const CONTEXTUAL_MESSAGES: Record<string, string> = {
     "Olá! Tenho interesse em reservar o Espaço Cruzeiro para uma confraternização.",
 };
 
-export function WhatsAppFloat() {
+export function WhatsAppFloat({ whatsappNumber }: { whatsappNumber: string }) {
   const pathname = usePathname();
-  // Hide during the reservation / checkout flow.
   if (pathname.startsWith("/reservar")) return null;
 
-  const number =
-    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? BUSINESS.contact.whatsappNumber;
   const message =
     CONTEXTUAL_MESSAGES[pathname] ??
     "Olá! Tenho uma dúvida sobre o Espaço Cruzeiro.";
 
   return (
     <a
-      href={waLink(number, message)}
+      href={waLink(whatsappNumber, message)}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Conversar no WhatsApp"

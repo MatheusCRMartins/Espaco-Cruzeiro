@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { LegalPage } from "@/components/site/legal-page";
-import { BUSINESS } from "@/lib/constants";
+import { getBusinessSettings } from "@/lib/business-settings";
 
 export const metadata: Metadata = {
   title: "Política de Privacidade",
@@ -9,7 +9,8 @@ export const metadata: Metadata = {
     "Como o Espaço Cruzeiro coleta, usa e protege seus dados pessoais, em conformidade com a LGPD.",
 };
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const settings = await getBusinessSettings();
   return (
     <LegalPage
       eyebrow="Política"
@@ -18,7 +19,7 @@ export default function PrivacyPage() {
     >
       <section className="space-y-3">
         <p>
-          Esta política descreve como o <strong>{BUSINESS.legalName}</strong>{" "}
+          Esta política descreve como o <strong>{settings.legalName}</strong>{" "}
           (&ldquo;nós&rdquo;) coleta, utiliza, armazena e compartilha os dados
           pessoais de quem usa este site e contrata nossos serviços, em
           conformidade com a Lei Geral de Proteção de Dados (Lei 13.709/2018 —
@@ -84,8 +85,8 @@ export default function PrivacyPage() {
           Você pode, a qualquer momento, solicitar: acesso, correção, exclusão,
           portabilidade, anonimização, informação sobre compartilhamento e
           revogação do consentimento. Basta escrever para{" "}
-          <a href={`mailto:${BUSINESS.contact.email}`}>
-            {BUSINESS.contact.email}
+          <a href={`mailto:${settings.contact.email}`}>
+            {settings.contact.email}
           </a>
           .
         </p>
@@ -113,8 +114,8 @@ export default function PrivacyPage() {
         <h2>8. Contato do encarregado</h2>
         <p>
           Dúvidas sobre esta política?{" "}
-          <a href={`mailto:${BUSINESS.contact.email}`}>
-            {BUSINESS.contact.email}
+          <a href={`mailto:${settings.contact.email}`}>
+            {settings.contact.email}
           </a>{" "}
           — respondemos em até 15 dias úteis.
         </p>

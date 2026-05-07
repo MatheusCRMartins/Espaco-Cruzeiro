@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { LegalPage } from "@/components/site/legal-page";
-import { BUSINESS } from "@/lib/constants";
+import { getBusinessSettings } from "@/lib/business-settings";
 
 export const metadata: Metadata = {
   title: "Política de Cancelamento",
@@ -9,7 +9,8 @@ export const metadata: Metadata = {
     "Regras de cancelamento, reembolso e remarcação de eventos contratados no Espaço Cruzeiro.",
 };
 
-export default function CancelationPage() {
+export default async function CancelationPage() {
+  const settings = await getBusinessSettings();
   return (
     <LegalPage
       eyebrow="Política"
@@ -110,8 +111,8 @@ export default function CancelationPage() {
         <h2>6. Como solicitar</h2>
         <p>
           Envie um e-mail para{" "}
-          <a href={`mailto:${BUSINESS.contact.email}`}>
-            {BUSINESS.contact.email}
+          <a href={`mailto:${settings.contact.email}`}>
+            {settings.contact.email}
           </a>{" "}
           com o código da sua reserva e o motivo. Retornamos em até 3 dias
           úteis com o cálculo do reembolso ou a proposta de nova data.
